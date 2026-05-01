@@ -1,0 +1,6 @@
+pyteserract
+fastapi
+uvicorn
+numpy
+opencv-python
+logging
