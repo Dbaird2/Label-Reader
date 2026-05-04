@@ -4,3 +4,13 @@ uvicorn
 numpy
 opencv-python
 logging
+slowapi
+pydantic
+python-dotenv
+requests
+asyncpg
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
+pytest-cov
