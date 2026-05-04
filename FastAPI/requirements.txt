@@ -1,4 +1,4 @@
-pyteserract
+pytesseract
 fastapi
 uvicorn
 numpy
