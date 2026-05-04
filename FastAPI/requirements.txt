@@ -2,7 +2,7 @@ pytesseract
 fastapi
 uvicorn
 numpy
-opencv-python
+opencv-python-headless
 logging
 slowapi
 pydantic
