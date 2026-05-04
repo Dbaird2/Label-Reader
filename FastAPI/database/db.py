@@ -8,29 +8,30 @@ class Database:
         self.pool = None
 
     async def connect(self):
-        from dotenv import load_dotenv
-        import os
+        pass
+        # from dotenv import load_dotenv
+        # import os
 
-        load_dotenv()
+        # load_dotenv()
 
-        DB_USER = os.getenv("DB_USER")
-        DB_PASSWORD = os.getenv("DB_PASSWORD")
-        DB_HOST = os.getenv("DB_HOST")
-        DB_NAME = os.getenv("DB_NAME")
+        # DB_USER = os.getenv("DB_USER")
+        # DB_PASSWORD = os.getenv("DB_PASSWORD")
+        # DB_HOST = os.getenv("DB_HOST")
+        # DB_NAME = os.getenv("DB_NAME")
 
-        try:
-            self.pool = await asyncpg.create_pool(
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_NAME,
-                host=DB_HOST,
-                port=6543,
-                statement_cache_size=0
-            )          
-            logger.info("Connected to database — host=%s | db=%s", DB_HOST, DB_NAME)
-        except Exception as e:
-            logger.exception("Database connection pool failed — host=%s | db=%s | error: %s", DB_HOST, DB_NAME, e)
-            raise
+        # try:
+        #     self.pool = await asyncpg.create_pool(
+        #         user=DB_USER,
+        #         password=DB_PASSWORD,
+        #         database=DB_NAME,
+        #         host=DB_HOST,
+        #         port=6543,
+        #         statement_cache_size=0
+        #     )          
+        #     logger.info("Connected to database — host=%s | db=%s", DB_HOST, DB_NAME)
+        # except Exception as e:
+        #     logger.exception("Database connection pool failed — host=%s | db=%s | error: %s", DB_HOST, DB_NAME, e)
+        #     raise
 
     # async def upsertUser(self, email: str, name: str):
     #     try:

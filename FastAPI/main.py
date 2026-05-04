@@ -1,4 +1,3 @@
-from socket_handlers import events_ws
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -8,10 +7,9 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 import state
 from services.background import repeatInsert
-from routers import items, auth, events
-from socket_handlers import items_ws, investments_ws
 import os
 import logging
+from socket_handlers.web_socket import router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 origins = [
-    "https://bdo-event-tracker.vercel.app",
+    "*",
 ]
 
 @asynccontextmanager
@@ -42,6 +40,7 @@ async def lifespan(app: FastAPI):
     task.add_done_callback(lambda t: logger.error("Background task ended — exception: %s", t.exception()) if not t.cancelled() else logger.warning("Background task was cancelled"))
     yield
     await state.db.closeConnection()
+    await state.ws.closeConnections()
     logger.info("Database connection closed and WebSocket connections cleaned up")
 
 app = FastAPI(lifespan=lifespan)
@@ -56,12 +55,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(items.router)
-app.include_router(auth.router)
-app.include_router(events.router)
-
 # Include WebSocket routers
-app.include_router(items_ws.router)
-app.include_router(events_ws.router)
-app.include_router(investments_ws.router)
+app.include_router(router)
