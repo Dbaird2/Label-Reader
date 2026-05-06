@@ -1,9 +1,7 @@
-pytesseract
 fastapi
-uvicorn
+uvicorn[standard]
 numpy
 opencv-python-headless
-logging
 slowapi
 pydantic
 python-dotenv
@@ -13,5 +11,5 @@ pytest
 pytest-asyncio
 pytest-cov
 pytest-mock
-pytest-cov
 pandas
+easyocr

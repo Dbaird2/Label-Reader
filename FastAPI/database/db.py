@@ -55,9 +55,9 @@ class Database:
             async with self.pool.acquire() as conn:
                 row = await conn.fetchrow("""
                     SELECT name, building, room, department,
-                        similarity(name, $1) AS score
+                        similarity(UPPER(name), UPPER($1)) AS score
                     FROM person
-                    WHERE similarity(name, $1) > 0.75
+                    WHERE similarity(UPPER(name), UPPER($1)) > 0.5
                     ORDER BY score DESC
                 LIMIT 1
             """, name)

@@ -15,19 +15,46 @@ async def ocr_ws(websocket: WebSocket):
     await state.ws.connect(websocket)
     try:
         while True:
-            data = await websocket.receive_json()
-            frame_b64 = data.get("frame")
+            try:
+                data = await websocket.receive_json()
+            except WebSocketDisconnect as e:
+                logger.warning("Client disconnected: code=%s", e.code)
+                break
+            except Exception as e:
+                logger.error("Failed to receive JSON: %s", e)
+                await websocket.send_json({"error": f"Invalid data: {str(e)}"})
+                continue
+
+            logger.info("Total data size: %d chars", len(str(data)))  # ADD THIS
+            logger.info("Received keys: %s", list(data.keys()))
+            frame_b64 = data.get("image")
+
             if not frame_b64:
                 await websocket.send_json({"error": "No frame provided"})
                 continue
 
+            logger.info("Decoding base64...")
             try:
                 img_bytes = base64.b64decode(frame_b64)
-            except Exception:
+                logger.info("Decoded: %d bytes", len(img_bytes))
+            except Exception as e:
+                logger.error("Base64 decode failed: %s", e)
                 await websocket.send_json({"error": "Invalid base64"})
                 continue
 
-            result = await get_results(img_bytes)
+            logger.info("Calling get_results...")
+            try:
+                result = await get_results(img_bytes)
+                logger.info("Result: %s", result)
+            except Exception as e:
+                logger.exception("get_results failed: %s", e)
+                await websocket.send_json({"error": "Processing failed"})
+                continue
+
             await websocket.send_json(result)
     except WebSocketDisconnect:
-        await state.ws.disconnect(websocket)
+        state.ws.disconnect(websocket)
+    
+@router.get("/ocr-test")
+async def ocr_test():
+    return {"status": "router is registered"}

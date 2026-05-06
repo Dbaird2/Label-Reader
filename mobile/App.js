@@ -30,6 +30,7 @@ export default function App() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const resultSlide = useRef(new Animated.Value(60)).current;
+  console.log("Results: ", result);
 
   useEffect(() => {
     if (scanning) {
@@ -79,6 +80,7 @@ export default function App() {
     setError(null);
     console.log("creating websocket...");
     const ws = new WebSocket(WS_URL);
+    console.log("WebSocket instance created:", ws);
     ws.onopen = () => {
       setWsStatus("connected");
       setError(null);
@@ -86,18 +88,18 @@ export default function App() {
     ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-        if (data.building !== undefined) {
+        if (data.department !== undefined) {
           setResult({
-            building: data.building,
+            department: data.department,
             confidence: data.confidence ?? null,
           });
         } else if (data.error) {
           setError(data.error);
         } else if (data.text) {
-          setResult({ building: data.text, confidence: null });
+          setResult({ department: data.text, confidence: null });
         }
       } catch {
-        setResult({ building: e.data, confidence: null });
+        setResult({ department: e.data, confidence: null });
       }
     };
     ws.onerror = () => {
@@ -117,8 +119,10 @@ export default function App() {
   }, []);
 
   const captureAndSend = useCallback(async () => {
-    if (!cameraRef.current || wsRef.current?.readyState !== WebSocket.OPEN)
+    if (!cameraRef.current || wsRef.current?.readyState !== WebSocket.OPEN) {
+      console.log("Cannot capture: camera or websocket not ready");
       return;
+    }
     try {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.5,
@@ -134,6 +138,7 @@ export default function App() {
         },
       );
       if (resized.base64) {
+        console.log("Captured and resized image, sending to server...");
         wsRef.current.send(JSON.stringify({ image: resized.base64 }));
       }
     } catch (err) {
@@ -232,7 +237,7 @@ export default function App() {
             styles.resultCard,
             { opacity: fadeAnim, transform: [{ translateY: resultSlide }] },
           ]}>
-          <Text style={styles.resultBuilding}>{result.building}</Text>
+          <Text style={styles.resultBuilding}>{result.department}</Text>
           {confidencePercent && (
             <View style={styles.confidenceRow}>
               <Text style={styles.confidenceLabel}>Confidence</Text>
