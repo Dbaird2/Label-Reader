@@ -26,11 +26,9 @@ export default function App() {
 
   const cameraRef = useRef(null);
   const wsRef = useRef(null);
-  const intervalRef = useRef(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const resultSlide = useRef(new Animated.Value(60)).current;
-  console.log("Results: ", result);
 
   useEffect(() => {
     if (scanning) {
@@ -48,6 +46,7 @@ export default function App() {
           }),
         ]),
       ).start();
+      setScanning(false);
     } else {
       pulseAnim.stopAnimation();
       pulseAnim.setValue(1);
@@ -75,6 +74,7 @@ export default function App() {
   }, [result]);
 
   const connectWS = useCallback(() => {
+    console.log("Attempting to connect WebSocket...");
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     setWsStatus("connecting");
     setError(null);
@@ -104,11 +104,10 @@ export default function App() {
     };
     ws.onerror = () => {
       setWsStatus("error");
-      setError("WebSocket error. Is the server running on :8000?");
+      setError("Connection error. Please try again.");
     };
     ws.onclose = () => {
       setWsStatus("disconnected");
-      stopScanning();
     };
     wsRef.current = ws;
   }, []);
@@ -146,26 +145,34 @@ export default function App() {
     }
   }, []);
 
-  const startScanning = useCallback(() => {
-    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+  const captureOnce = useCallback(async () => {
+    if (!cameraRef.current || wsRef.current?.readyState !== WebSocket.OPEN)
+      return;
     setScanning(true);
     setResult(null);
-    intervalRef.current = setInterval(captureAndSend, CAPTURE_INTERVAL_MS);
-  }, [captureAndSend]);
-
-  const stopScanning = useCallback(() => {
-    setScanning(false);
-    clearInterval(intervalRef.current);
-    intervalRef.current = null;
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.5,
+        skipProcessing: true,
+      });
+      const resized = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [{ resize: { width: 500 } }],
+        {
+          compress: 0.6,
+          format: ImageManipulator.SaveFormat.JPEG,
+          base64: true,
+        },
+      );
+      if (resized.base64) {
+        wsRef.current.send(JSON.stringify({ image: resized.base64 }));
+      }
+    } catch (err) {
+      console.warn("Capture error:", err);
+    } finally {
+      setScanning(false);
+    }
   }, []);
-
-  useEffect(
-    () => () => {
-      clearInterval(intervalRef.current);
-      wsRef.current?.close();
-    },
-    [],
-  );
 
   if (!permission) return <View style={styles.container} />;
   if (!permission.granted) {
@@ -237,15 +244,26 @@ export default function App() {
             styles.resultCard,
             { opacity: fadeAnim, transform: [{ translateY: resultSlide }] },
           ]}>
-          <Text style={styles.resultBuilding}>{result.department}</Text>
+          <Text style={styles.resultBuilding}>
+            {result?.department ?? "Please Try Again"}
+          </Text>
           {confidencePercent && (
-            <View style={styles.confidenceRow}>
-              <Text style={styles.confidenceLabel}>Confidence</Text>
-              <Text
-                style={[styles.confidenceValue, { color: confidenceColor }]}>
-                {confidencePercent}
-              </Text>
-            </View>
+            <>
+              <View style={styles.confidenceRow}>
+                <Text style={styles.confidenceLabel}>Name: </Text>
+                <Text
+                  style={[styles.confidenceValue, { color: confidenceColor }]}>
+                  {result?.name ?? "Unknown"}
+                </Text>
+              </View>
+              <View style={styles.confidenceRow}>
+                <Text style={styles.confidenceLabel}>Confidence</Text>
+                <Text
+                  style={[styles.confidenceValue, { color: confidenceColor }]}>
+                  {confidencePercent}
+                </Text>
+              </View>
+            </>
           )}
         </Animated.View>
       )}
@@ -280,7 +298,7 @@ export default function App() {
               scanning && styles.scanBtnActive,
               !isConnected && styles.scanBtnDisabled,
             ]}
-            onPress={scanning ? stopScanning : startScanning}
+            onPress={captureOnce}
             disabled={!isConnected}
             activeOpacity={0.8}>
             <View
