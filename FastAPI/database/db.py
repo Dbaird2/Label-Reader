@@ -1,3 +1,4 @@
+from models.OCR_Model import AddPersonModel
 import asyncpg
 import logging
 
@@ -32,16 +33,6 @@ class Database:
             logger.exception("Database connection pool failed — host=%s | db=%s | error: %s", DB_HOST, DB_NAME, e)
             raise
 
-    # async def upsertUser(self, email: str, name: str):
-    #     try:
-    #         await self.pool.execute('''
-    #             INSERT INTO users (email, name) VALUES ($1, $2)
-    #             ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
-    #         ''', email, name)
-    #     except Exception as e:
-    #         logger.exception("upsertUser failed — email=%s | error: %s", email, e)
-    #         raise
-
     async def execute(self, query: str, *args):
         try:
             async with self.pool.acquire() as connection:
@@ -54,10 +45,10 @@ class Database:
         try:
             async with self.pool.acquire() as conn:
                 row = await conn.fetchrow("""
-                    SELECT name, building, room, department,
+                    SELECT name, building, room, department, id, school,
                         similarity(UPPER(name), UPPER($1)) AS score
                     FROM person
-                    WHERE similarity(UPPER(name), UPPER($1)) > 0.5
+                    WHERE similarity(UPPER(name), UPPER($1)) > 0.3
                     ORDER BY score DESC
                 LIMIT 1
             """, name)
@@ -66,14 +57,52 @@ class Database:
                 return None
 
             return {
+                "id": row["id"],
                 "name": row["name"],
                 "building": row["building"],
                 "room": row["room"],
                 "department": row["department"],
+                "school": row["school"],
                 "confidence": float(row["score"])
             }
         except Exception as e:
             logger.exception("lookup_name failed — name=%s | error: %s", name, e)
+            raise
+    
+    async def upsertPerson(self, data: AddPersonModel):
+        name = building = room = department = school = None  # initialize first
+
+        try:
+            name = data.name
+            name = name.strip().upper() if name else None
+
+            building = data.building
+            building = building.strip().title() if building else None
+
+            room = data.room
+            room = room.strip().title() if room else None
+
+            department = data.department
+            department = department.strip().title() if department else None
+
+            school = data.school
+            school = school.strip().upper() if school else None
+
+            if not name or not school or not department:
+                logger.warning("upsertPerson called with missing required fields — payload: %s", data)
+                raise ValueError("Fields missing that are required")
+
+            await self.pool.execute('''
+                INSERT INTO person (name, building, room, department, school) 
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (name, building, room, school) DO UPDATE 
+                SET building = EXCLUDED.building,
+                    room = EXCLUDED.room,
+                    department = EXCLUDED.department
+                ''', name, building, room, department, school)
+            logger.info("Upserted person: %s", data.name)
+        except Exception as e:
+            logger.exception("upsertPerson failed — name=%s | error: %s", name, e)
             raise
 
     async def closeConnection(self):

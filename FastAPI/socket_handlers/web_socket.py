@@ -1,60 +1,118 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
-import state
+from models.OCR_Model import AddPersonModel, OCRModel, OCRResult, SearchPersonModel
 from ocr_services.ocr_functions import get_results
-import base64
-# from routers.auth import checkJWT
+from pydantic import ValidationError
+from pathlib import Path
 import logging 
+import base64
+import state
+
+DEBUG_DIR = Path("debug_frames")
+DEBUG_DIR.mkdir(exist_ok=True)
 
 router = APIRouter(tags=["ocr"], prefix="/ws")
 logger = logging.getLogger(__name__)
 
 @router.websocket("/ocr")
 async def ocr_ws(websocket: WebSocket):
-    logger.debug("/ocr_ws called")
     await websocket.accept()
     await state.ws.connect(websocket)
+
     try:
         while True:
             try:
                 data = await websocket.receive_json()
+                if data.get("addPerson"):
+                    await handle_add_person(websocket, data)
+                elif data.get("ocr"):
+                    await handle_ocr(websocket, data)
+                elif data.get("searchPerson"):
+                    await search_person(websocket, data)
+                else:
+                    await websocket.send_json({"error": "Unknown message type"})
+
             except WebSocketDisconnect as e:
                 logger.warning("Client disconnected: code=%s", e.code)
                 break
             except Exception as e:
-                logger.error("Failed to receive JSON: %s", e)
+                logger.error("Unexpected error: %s", e)
                 await websocket.send_json({"error": f"Invalid data: {str(e)}"})
-                continue
 
-            logger.info("Total data size: %d chars", len(str(data)))  # ADD THIS
-            logger.info("Received keys: %s", list(data.keys()))
-            frame_b64 = data.get("image")
-
-            if not frame_b64:
-                await websocket.send_json({"error": "No frame provided"})
-                continue
-
-            logger.info("Decoding base64...")
-            try:
-                img_bytes = base64.b64decode(frame_b64)
-                logger.info("Decoded: %d bytes", len(img_bytes))
-            except Exception as e:
-                logger.error("Base64 decode failed: %s", e)
-                await websocket.send_json({"error": "Invalid base64"})
-                continue
-
-            logger.info("Calling get_results...")
-            try:
-                result = await get_results(img_bytes)
-                logger.info("Result: %s", result)
-            except Exception as e:
-                logger.exception("get_results failed: %s", e)
-                await websocket.send_json({"error": "Processing failed"})
-                continue
-
-            await websocket.send_json(result)
-    except WebSocketDisconnect:
+    finally:
         state.ws.disconnect(websocket)
+
+
+async def decode_base64(data: str) -> bytes | None:
+    try:
+        return base64.b64decode(data)
+    except Exception:
+        return None
+
+async def run_ocr(img_bytes: bytes) -> dict | None:
+    try:
+        return await get_results(img_bytes)
+    except Exception as e:
+        logger.exception("OCR processing failed: %s", e)
+        return None
+
+async def upsert_person(person: AddPersonModel) -> bool:
+    try:
+        await state.db.upsertPerson(person)
+        return True
+    except Exception as e:
+        logger.error("Failed to add person upsert_person: %s", e)
+        return False
+
+
+async def handle_ocr(websocket: WebSocket, data: dict):
+    try:
+        message = OCRModel(**data)
+    except ValidationError as e:
+        await websocket.send_json({"error": f"Invalid OCR data: {str(e)}"})
+        return
+
+    img_bytes = await decode_base64(message.image)
+    if not img_bytes:
+        await websocket.send_json({"error": "Invalid base64"})
+        return
+
+    result = await run_ocr(img_bytes)
+    if not result:
+        await websocket.send_json({"error": "Processing failed"})
+        return
+
+    await websocket.send_json(result.model_dump())
+
+
+async def handle_add_person(websocket: WebSocket, data: dict):
+    try:
+        person = AddPersonModel(**data)
+    except ValidationError as e:
+        await websocket.send_json({"error": f"Invalid person data: {str(e)}"})
+        return
+
+    success = await upsert_person(person)
+    if not success:
+        await websocket.send_json({"error": "Failed to add person"})
+        return
+
+    await websocket.send_json({"status": "Person added"})
     
+async def search_person(websocket: WebSocket, data: dict):
+    try:
+        search_model = SearchPersonModel(**data)
+        logger.info("Searching for: %s", search_model.search)
+    except ValidationError as e:
+        await websocket.send_json({"error": f"Invalid search data: {str(e)}"})
+        return
+
+    result = await state.db.lookupName(search_model.search)
+    if result:
+        await websocket.send_json(result)
+    else:
+        await websocket.send_json({'status': 'Person Not Found'})
+
+
 @router.get("/ocr-test")
 async def ocr_test():
     return {"status": "router is registered"}

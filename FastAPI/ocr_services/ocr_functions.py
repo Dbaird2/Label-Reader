@@ -1,5 +1,5 @@
 
-import asyncio
+from models.OCR_Model import OCRResult
 import logging
 import base64
 import cv2
@@ -15,28 +15,37 @@ logger = logging.getLogger(__name__)
 
 # ocr_functions.py
 def preprocess_label(img_bytes: bytes):
-    arr = np.frombuffer(img_bytes, np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    # Decode
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    if img is None:
-        raise ValueError("Invalid image bytes")
+    # 1. Upscale first — EasyOCR struggles under ~150 DPI equivalent
+    img = cv2.resize(img, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
 
+    # 2. Grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
-    # Resize up if image is small — helps OCR significantly
-    h, w = gray.shape
-    if w < 800:
-        scale = 800 / w
-        gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
 
-    # Denoise before sharpening
-    denoised = cv2.fastNlMeansDenoising(gray, h=10)
+    # 3. Denoise before thresholding (kills JPEG compression artifacts)
+    gray = cv2.fastNlMeansDenoising(gray, h=10)
     
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    enhanced = clahe.apply(denoised)
+    gray = clahe.apply(gray)
+    # 4. Sharpen
+    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+    gray = cv2.filter2D(gray, -1, kernel)
 
-    _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    return binary
+    # 5. Adaptive threshold (better than global for uneven lighting)
+    thresh = cv2.adaptiveThreshold(
+        gray, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY, 31, 10
+    )
+
+    # 6. Morphological closing — connects broken letter strokes
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+    thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+
+    return thresh
 
 def filterString(string: str) -> bool:
     if len(string) < 3:
@@ -54,42 +63,49 @@ def filterString(string: str) -> bool:
         return False
     return True
 
-async def get_results(img_bytes: bytes) -> dict:
+def get_candidates(tokens: list[str]) -> list[str]:
+    singles = tokens
+    bigrams = [f"{tokens[i]} {tokens[i+1]}" for i in range(len(tokens) - 1)]
+    trigrams = [f"{tokens[i]} {tokens[i+1]} {tokens[i+2]}" for i in range(len(tokens) - 2)]
+    return singles + bigrams + trigrams
+
+async def run_easy_ocr(img_bytes: bytes) -> list:
     loop = asyncio.get_event_loop()
+    try:
+        return await loop.run_in_executor(
+            None,
+            lambda: reader.readtext(img_bytes, detail=1, paragraph=False)
+        )
+    except Exception as e:
+        logger.error("EasyOCR failed: %s", e)
+        return []
 
-    logger.info("Running EasyOCR...")
-    results = await loop.run_in_executor(
-        None,
-        lambda: reader.readtext(img_bytes, detail=1, paragraph=False)
-    )
 
-    logger.info("Raw EasyOCR results: %s", results)
-
-    # results = [(bbox, text, confidence), ...]
-    lines = [
+def filter_ocr_results(results: list) -> list:
+    return [
         text for (_, text, conf) in results
         if conf > 0.4 and filterString(text)
     ]
 
-    logger.info("Filtered lines: %s", lines)
-    # candidate = " ".join(lines[:2])
-    # logger.info("Candidate: %r", candidate)
 
-    # if not candidate.strip():
-    #     logger.warning("No candidate extracted")
-    #     return {"name": None, "building": None, "room": None, "confidence": None}
-    highest_match = None
-    for line in lines:
-        match = await state.db.lookupName(line)
-        if match and (not highest_match or match["confidence"] > highest_match["confidence"]):
-            highest_match = match
-    logger.info("DB result: %s", highest_match)
+async def find_best_match(candidates: list) -> dict | None:
+    best_match = None
+    for candidate in candidates:
+        match = await state.db.lookupName(candidate)
+        if match and (not best_match or match["confidence"] > best_match["confidence"]):
+            best_match = match
+        if best_match and best_match["confidence"] == 1.0:
+            break
+    return best_match
 
-    return {
-        "name": highest_match["name"] if highest_match else None,
-        "building": highest_match["building"] if highest_match else None,
-        "room": highest_match["room"] if highest_match else None,
-        "department": highest_match["department"] if highest_match else None,
-        "confidence": highest_match["confidence"] if highest_match else None
-    }
 
+async def get_results(img_bytes: bytes) -> OCRResult:
+    raw = await run_easy_ocr(img_bytes)
+    for bbox, text, conf in raw:
+        logger.info("OCR candidate: '%s' with confidence %.2f", text, conf)
+    filtered = filter_ocr_results(raw)
+    logger.info("OCR candidates: %s", filtered)
+    candidates = get_candidates(filtered)
+    best_match = await find_best_match(candidates)
+
+    return OCRResult(**(best_match or {}))
