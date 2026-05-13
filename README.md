@@ -13,7 +13,7 @@
 | High | Modularize the React Native app codebase | Break App.js into focused components and services |
 | High | Add CI/CD pipeline with main branch protection | Require PRs, block merges on failed pipeline |
 | High | Integration & unit testing with Pytest | Cover OCR pipeline, DB lookups, WebSocket handlers |
-| Medium | Create/Use more Pydantic models on/for returns
+| Medium | Create/Use more Pydantic models on/for returns |
 
 ---
 
