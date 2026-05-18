@@ -52,8 +52,8 @@ def filterString(string: str) -> bool:
         return False
     if re.search(r'\d', string):
         return False
-    if 'colorado' in string.lower():
-        return False
+    # if 'colorado' in string.lower():
+    #     return False
     alpha_ratio = sum(c.isalpha() for c in string) / len(string)
     if alpha_ratio < 0.6:
         return False
@@ -64,6 +64,8 @@ def filterString(string: str) -> bool:
     return True
 
 def get_candidates(tokens: list[str]) -> list[str]:
+    if not tokens:
+        return []
     singles = tokens
     bigrams = [f"{tokens[i]} {tokens[i+1]}" for i in range(len(tokens) - 1)]
     trigrams = [f"{tokens[i]} {tokens[i+1]} {tokens[i+2]}" for i in range(len(tokens) - 2)]
@@ -89,6 +91,8 @@ def filter_ocr_results(results: list) -> list:
 
 
 async def find_best_match(candidates: list) -> dict | None:
+    if not candidates:
+        return None
     best_match = None
     for candidate in candidates:
         match = await state.db.lookupName(candidate)
