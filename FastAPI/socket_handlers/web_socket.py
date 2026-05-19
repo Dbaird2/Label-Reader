@@ -16,19 +16,25 @@ logger = logging.getLogger(__name__)
 @router.websocket("/ocr")
 async def ocr_ws(websocket: WebSocket):
     await websocket.accept()
+    logger.info("Client connected: %s", websocket.client)
     await state.ws.connect(websocket)
 
     try:
         while True:
             try:
                 data = await websocket.receive_json()
+                logger.info("Received data: %s", data)
                 if data.get("addPerson"):
+                    logger.info("Handling addPerson request")
                     await handle_add_person(websocket, data)
                 elif data.get("ocr"):
+                    logger.info("Handling OCR request")
                     await handle_ocr(websocket, data)
                 elif data.get("searchPerson"):
+                    logger.info("Handling searchPerson request")
                     await search_person(websocket, data)
                 else:
+                    logger.warning("Unknown message type: %s", data)
                     await websocket.send_json({"error": "Unknown message type"})
 
             except WebSocketDisconnect as e:

@@ -26,6 +26,7 @@ origins = [
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await state.db.connect()
+    logger.info("Starting on port: %s", os.environ.get("PORT", "NOT SET"))
 
     logger.info("Database connected successfully")
 
