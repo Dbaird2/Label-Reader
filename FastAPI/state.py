@@ -1,9 +1,5 @@
-import os
 from database.db import Database
-
 from socket_handlers.socket_class import ConnectionManager
-import asyncio
-import logging
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
