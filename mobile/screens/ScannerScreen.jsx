@@ -51,7 +51,7 @@ function useResponsive() {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const WS_URL = "ws://10.188.189.151:8000/ws/ocr";
+const WS_URL = "wss://label-reader.railway.app/ws/ocr";
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function App({ navigation }) {
