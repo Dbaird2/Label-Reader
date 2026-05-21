@@ -109,7 +109,7 @@ export default function App({ navigation }) {
     setWsStatus("connecting");
     setError(null);
     const ws = new WebSocket(WS_URL);
-    ws.onopen = () => { setWsStatus("connected"); setError(null); };
+    ws.onopen = () => { setWsStatus("connected"); setError(null); console.log("WebSocket connected"); };
     ws.onmessage = (e) => {
       try {
           const data = JSON.parse(e.data);
