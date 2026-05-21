@@ -23,7 +23,6 @@ async def ocr_ws(websocket: WebSocket):
         while True:
             try:
                 data = await websocket.receive_json()
-                logger.info("Received data: %s", data)
                 if data.get("addPerson"):
                     logger.info("Handling addPerson request")
                     await handle_add_person(websocket, data)
