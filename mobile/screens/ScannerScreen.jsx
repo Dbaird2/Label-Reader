@@ -51,8 +51,7 @@ function useResponsive() {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const WS_URL = "wss://label-reader.railway.app/ws/ocr";
-
+const WS_URL = "wss://label-reader.up.railway.app/ws/ocr";
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function App({ navigation }) {
   const R = useResponsive();

@@ -35,7 +35,8 @@ async def lifespan(app: FastAPI):
     time2 = datetime.now()
     diff = time2 - time1
     logger.info("Background task created in %d.%06ds", diff.seconds, diff.microseconds)
-
+    print("🔥 MAIN.PY IS RUNNING")
+    print("🔥 ROUTES:", [r.path for r in app.routes])
     await asyncio.sleep(0) 
     logger.info("Background task registered: %s", task)
     task.add_done_callback(lambda t: logger.error("Background task ended — exception: %s", t.exception()) if not t.cancelled() else logger.warning("Background task was cancelled"))
@@ -58,3 +59,6 @@ app.add_middleware(
 
 # Include WebSocket routers
 app.include_router(router)
+
+print("🔥 MAIN.PY IS RUNNING")
+print("🔥 ROUTES:", [r.path for r in app.routes])
