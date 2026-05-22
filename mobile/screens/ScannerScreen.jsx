@@ -65,7 +65,7 @@ export default function App({ navigation }) {
   const [statusMsg, setStatusMsg] = useState(null);
   const [visible, setVisible] = useState(false);
   const [visibleManual, setVisibleManual] = useState(false);
-    const [form, setForm] = useState({ name: null, department: null, building: null, room: null, school: null });
+    const [form, setForm] = useState({ id: null, name: null, department: null, building: null, room: null, school: null });
     const [search, setSearch] = useState(null);
 
   const cameraRef = useRef(null);
@@ -139,7 +139,7 @@ export default function App({ navigation }) {
   const addPerson = useCallback(() => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return;
     wsRef.current.send(JSON.stringify({ addPerson: true, ...form }));
-    setForm({ name: "", department: "", building: "", room: "", school: "" });
+    setForm({ id: "", name: "", department: "", building: "", room: "", school: "" });
   }, [form]);
     
     const searchPerson = useCallback(() => {

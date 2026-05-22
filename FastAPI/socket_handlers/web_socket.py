@@ -1,5 +1,5 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
-from models.OCR_Model import AddPersonModel, OCRModel, OCRResult, SearchPersonModel
+from models.OCR_Model import AddPersonModel, EditPersonModel, OCRModel, OCRResult, SearchPersonModel
 from ocr_services.ocr_functions import get_results
 from pydantic import ValidationError
 from pathlib import Path
@@ -15,10 +15,13 @@ logger = logging.getLogger(__name__)
 
 @router.websocket("/ocr")
 async def ocr_ws(websocket: WebSocket):
-    await websocket.accept()
-    logger.info("Client connected: %s", websocket.client)
-    await state.ws.connect(websocket)
-
+    try:
+        await websocket.accept()
+        logger.info("Client connected: %s", websocket.client)
+        await state.ws.connect(websocket)
+    except Exception as e:
+        logger.error("WebSocket connection error: %s", e)
+        return
     try:
         while True:
             try:
@@ -67,6 +70,14 @@ async def upsert_person(person: AddPersonModel) -> bool:
     except Exception as e:
         logger.error("Failed to add person upsert_person: %s", e)
         return False
+    
+async def edit_person(person: EditPersonModel) -> bool:
+    try:
+        await state.db.editPerson(person)
+        return True
+    except Exception as e:
+        logger.error("Failed to edit person edit_person: %s", e)
+        return False
 
 
 async def handle_ocr(websocket: WebSocket, data: dict):
@@ -91,17 +102,17 @@ async def handle_ocr(websocket: WebSocket, data: dict):
 
 async def handle_add_person(websocket: WebSocket, data: dict):
     try:
-        person = AddPersonModel(**data)
+        person = EditPersonModel(**data)
     except ValidationError as e:
         await websocket.send_json({"error": f"Invalid person data: {str(e)}"})
         return
 
-    success = await upsert_person(person)
+    success = await edit_person(person)
     if not success:
-        await websocket.send_json({"error": "Failed to add person"})
+        await websocket.send_json({"error": "Failed to edit person"})
         return
 
-    await websocket.send_json({"status": "Person added"})
+    await websocket.send_json({"status": "Person edited successfully"})
     
 async def search_person(websocket: WebSocket, data: dict):
     try:
