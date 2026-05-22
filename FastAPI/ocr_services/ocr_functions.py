@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # ocr_functions.py
 def preprocess_label(img_bytes: bytes):
     # Decode
-    nparr = np.frombuffer(image_bytes, np.uint8)
+    nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     # 1. Upscale first — EasyOCR struggles under ~150 DPI equivalent
@@ -104,6 +104,7 @@ async def find_best_match(candidates: list) -> dict | None:
 
 
 async def get_results(img_bytes: bytes) -> OCRResult:
+    img_bytes = preprocess_label(img_bytes) 
     raw = await run_easy_ocr(img_bytes)
     for bbox, text, conf in raw:
         logger.info("OCR candidate: '%s' with confidence %.2f", text, conf)
