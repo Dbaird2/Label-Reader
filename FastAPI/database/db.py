@@ -1,4 +1,4 @@
-from models.OCR_Model import AddPersonModel
+from models.OCR_Model import AddPersonModel, EditPersonModel
 import asyncpg
 import logging
 
@@ -99,6 +99,51 @@ class Database:
                 SET building = EXCLUDED.building,
                     room = EXCLUDED.room,
                     department = EXCLUDED.department
+                ''', name, building, room, department, school)
+            logger.info("Upserted person: %s", data.name)
+        except Exception as e:
+            logger.exception("upsertPerson failed — name=%s | error: %s", name, e)
+            raise
+
+    async def editPerson(self, data: EditPersonModel):
+        name = building = room = department = school = None  # initialize first
+
+        try:
+            name = data.name
+            name = name.strip().upper() if name else None
+
+            building = data.building
+            building = building.strip().title() if building else None
+
+            room = data.room
+            room = room.strip().title() if room else None
+
+            department = data.department
+            department = department.strip().title() if department else None
+
+            school = data.school
+            school = school.strip().upper() if school else None
+
+            if not name or not school or not department:
+                logger.warning("editPerson called with missing required fields — payload: %s", data)
+                raise ValueError("Fields missing that are required")
+
+            await self.pool.execute('''
+                UPDATE person 
+                SET name = $1,
+                    building = $2,
+                    room = $3,
+                    department = $4
+                WHERE id = $5 AND school = $6
+                ''', name, building, room, department, data.id, school)
+            logger.info("Edited person: %s", data.name)
+        except Exception as e:
+            logger.exception("editPerson failed — name=%s | error: %s", name, e)
+            raise
+
+    async def closeConnection(self):
+        await self.pool.close()
+
                 ''', name, building, room, department, school)
             logger.info("Upserted person: %s", data.name)
         except Exception as e:

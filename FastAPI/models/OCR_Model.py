@@ -14,6 +14,15 @@ class AddPersonModel(BaseModel):
     school: str
     department: str
 
+class EditPersonModel(BaseModel):
+    addPerson: bool = Field(..., description="Flag to indicate this is a request to add a person")
+    name: str
+    building: str | None
+    room: str | None
+    school: str
+    department: str
+    id: int
+
 class SearchPersonModel(BaseModel):
     searchPerson: bool = Field(..., description="Flag to indicate this is a request to search for a person")
     search: str
