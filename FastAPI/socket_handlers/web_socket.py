@@ -15,10 +15,13 @@ logger = logging.getLogger(__name__)
 
 @router.websocket("/ocr")
 async def ocr_ws(websocket: WebSocket):
-    await websocket.accept()
-    logger.info("Client connected: %s", websocket.client)
-    await state.ws.connect(websocket)
-
+    try:
+        await websocket.accept()
+        logger.info("Client connected: %s", websocket.client)
+        await state.ws.connect(websocket)
+    except Exception as e:
+        logger.error("WebSocket connection error: %s", e)
+        return
     try:
         while True:
             try:
