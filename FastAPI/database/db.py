@@ -143,12 +143,3 @@ class Database:
 
     async def closeConnection(self):
         await self.pool.close()
-
-                ''', name, building, room, department, school)
-            logger.info("Upserted person: %s", data.name)
-        except Exception as e:
-            logger.exception("upsertPerson failed — name=%s | error: %s", name, e)
-            raise
-
-    async def closeConnection(self):
-        await self.pool.close()
