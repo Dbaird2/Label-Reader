@@ -35,6 +35,9 @@ async def ocr_ws(websocket: WebSocket):
                 elif data.get("searchPerson"):
                     logger.info("Handling searchPerson request")
                     await search_person(websocket, data)
+                elif data.get("editPerson"):
+                    logger.info("Handling editPerson request")
+                    await handle_edit_person(websocket, data)
                 else:
                     logger.warning("Unknown message type: %s", data)
                     await websocket.send_json({"error": "Unknown message type"})
@@ -101,6 +104,20 @@ async def handle_ocr(websocket: WebSocket, data: dict):
 
 
 async def handle_add_person(websocket: WebSocket, data: dict):
+    try:
+        person = AddPersonModel(**data)
+    except ValidationError as e:
+        await websocket.send_json({"error": f"Invalid person data: {str(e)}"})
+        return
+
+    success = await upsert_person(person)
+    if not success:
+        await websocket.send_json({"error": "Failed to add person"})
+        return
+
+    await websocket.send_json({"status": "Person added successfully"})
+
+async def handle_edit_person(websocket: WebSocket, data: dict):
     try:
         person = EditPersonModel(**data)
     except ValidationError as e:
