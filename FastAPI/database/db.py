@@ -48,7 +48,7 @@ class Database:
                     SELECT name, building, room, department, id, school,
                         similarity(UPPER(name), UPPER($1)) AS score
                     FROM person
-                    WHERE similarity(UPPER(name), UPPER($1)) > 0.3
+                    WHERE similarity(UPPER(name), UPPER($1)) > 0.15
                     ORDER BY score DESC
                 LIMIT 1
             """, name)
