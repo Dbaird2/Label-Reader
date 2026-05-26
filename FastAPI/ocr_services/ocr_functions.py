@@ -15,37 +15,55 @@ logger = logging.getLogger(__name__)
 
 # ocr_functions.py
 def preprocess_label(img_bytes: bytes):
-    # Decode
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    # 1. Upscale first — EasyOCR struggles under ~150 DPI equivalent
+    # 1. Upscale
     img = cv2.resize(img, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
 
     # 2. Grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # 3. Denoise before thresholding (kills JPEG compression artifacts)
+    # 3. Denoise — do this early, before any contrast work
     gray = cv2.fastNlMeansDenoising(gray, h=10)
-    
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    gray = clahe.apply(gray)
-    # 4. Sharpen
-    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-    gray = cv2.filter2D(gray, -1, kernel)
 
-    # 5. Adaptive threshold (better than global for uneven lighting)
+    # 4. CLAHE — more conservative clip to avoid over-enhancing noise
+    clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8, 8))
+    gray = clahe.apply(gray)
+
+    # 5. Deskew — straighten before thresholding
+    gray = deskew(gray)
+
+    # 6. Adaptive threshold — smaller block for tighter local adaptation
     thresh = cv2.adaptiveThreshold(
         gray, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 31, 10
+        cv2.THRESH_BINARY, 15, 8
     )
 
-    # 6. Morphological closing — connects broken letter strokes
+    # 7. Inversion check — EasyOCR expects dark text on light background
+    if cv2.mean(thresh)[0] < 127:
+        thresh = cv2.bitwise_not(thresh)
+
+    # 8. Morphological closing — same as before, fine
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
     thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
 
     return thresh
+    
+def deskew(gray: np.ndarray) -> np.ndarray:
+    coords = np.column_stack(np.where(gray < 128))
+    if len(coords) < 50:
+        return gray
+    angle = cv2.minAreaRect(coords.astype(np.float32))[-1]
+    # minAreaRect returns angles in [-90, 0); normalize to [-45, 45]
+    if angle < -45:
+        angle += 90
+    (h, w) = gray.shape
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    return cv2.warpAffine(gray, M, (w, h), flags=cv2.INTER_CUBIC,
+                          borderMode=cv2.BORDER_REPLICATE)
 
 def filterString(string: str) -> bool:
     if len(string) < 3:

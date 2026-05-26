@@ -60,7 +60,7 @@ export default function App({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [wsStatus, setWsStatus] = useState("disconnected");
   const [scanning, setScanning] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState([]);
   const [error, setError] = useState(null);
   const [statusMsg, setStatusMsg] = useState(null);
   const [visible, setVisible] = useState(false);
@@ -114,7 +114,10 @@ export default function App({ navigation }) {
           const data = JSON.parse(e.data);
           console.log(data)
         if (data.department !== undefined) {
-          setResult({ department: data.department, confidence: data.confidence ?? null, name: data.name ?? null });
+          setResults(prev => [
+            ...prev,
+            { id: Date.now(), name, department, building, room, school, confidence }
+          ]);
           setForm({ name: data.name ?? null, department: data.department, building: data.building ?? null, room: data.room ?? null, school: data.school ?? null });
         } else if (data.error) {
           setError(data.error);
@@ -139,7 +142,7 @@ export default function App({ navigation }) {
   const addPerson = useCallback(() => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return;
     wsRef.current.send(JSON.stringify({ addPerson: true, ...form }));
-    setForm({ id: "", name: "", department: "", building: "", room: "", school: "" });
+    // setForm({ id: "", name: "", department: "", building: "", room: "", school: "" });
   }, [form]);
     
     const searchPerson = useCallback(() => {
@@ -357,7 +360,7 @@ export default function App({ navigation }) {
             {confidencePercent && (
               <>
                 <View style={{ flexDirection: "row", backgroundColor: "rgba(8,13,20,0.6)", borderRadius: sp(1.5), padding: sp(1.8) }}>
-                  <View style={{ flex: 1 }}>
+                  {/* <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: fs(10), color: "#475569", fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Name</Text>
                     <Text style={{ fontSize: fs(14), color: "#F0F9FF", fontWeight: "600" }} numberOfLines={1}>{result?.name ?? "Unknown"}</Text>
                   </View>
@@ -368,7 +371,15 @@ export default function App({ navigation }) {
                       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: confidenceColor }} />
                       <Text style={{ fontSize: fs(14), fontWeight: "700", color: confidenceColor }}>{confidencePercent}</Text>
                     </View>
-                  </View>
+                  </View> */}
+                  <ScrollView style={styles.resultsList}>
+                    {results.map(r => (
+                      <View key={r.id} style={styles.resultCard}>
+                        <Text style={styles.name}>{r.name}</Text>
+                        <Text style={styles.department}>{r.department}</Text>
+                      </View>
+                    ))}
+                  </ScrollView>
                 </View>
                 <TouchableOpacity
                   onPress={() => setVisible(true)} activeOpacity={0.85}
