@@ -64,9 +64,10 @@ export default function App({ navigation }) {
   const [error, setError] = useState(null);
   const [statusMsg, setStatusMsg] = useState(null);
   const [visible, setVisible] = useState(false);
-  const [visibleManual, setVisibleManual] = useState(false);
+  const [visibleManualSearch, setVisibleManualSearch] = useState(false);
     const [form, setForm] = useState({ id: null, name: null, department: null, building: null, room: null, school: null });
     const [search, setSearch] = useState(null);
+    const [show_results, setShow_results] = useState(true);
 
   const cameraRef = useRef(null);
   const wsRef = useRef(null);
@@ -107,6 +108,7 @@ export default function App({ navigation }) {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     setWsStatus("connecting");
     setError(null);
+    setShow_results(true);
     const ws = new WebSocket(WS_URL);
     ws.onopen = () => { setWsStatus("connected"); setError(null); console.log("WebSocket connected"); };
     ws.onmessage = (e) => {
@@ -114,22 +116,22 @@ export default function App({ navigation }) {
           const data = JSON.parse(e.data);
           console.log(data)
         if (data.department !== undefined) {
-          setResults(prev => [
-            ...prev,
-            { id: Date.now(), name, department, building, room, school, confidence }
-          ]);
+          setResult(prev => {
+            if (prev.some(r => r.id === data.id)) return prev; 
+            return [...prev, {  id: data.id ?? null, name: data.name ?? null, department: data.department, building: data.building ?? null, room: data.room ?? null, school: data.school ?? null, confidence: data.confidence }];
+          });
           setForm({ name: data.name ?? null, department: data.department, building: data.building ?? null, room: data.room ?? null, school: data.school ?? null });
         } else if (data.error) {
           setError(data.error);
         } else if (data.text) {
-          setResult({ department: data.text, confidence: null, name: data.name ?? null });
+          setResult(prev => [...prev, { department: data.text, confidence: null, name: data.name ?? null }]);
         } else if (data.status) {
           setStatusMsg(data.status);
         } else if (data === null) {
             setError('Person Not Found')
         }
       } catch {
-        setResult({ department: e?.data ?? 'Person not found', confidence: null });
+        setResult(prev => [...prev, { department: e?.data ?? 'Person not found', confidence: null }]);
       }
     };
     ws.onerror = () => { setWsStatus("error"); setError("Connection error. Please try again."); };
@@ -153,7 +155,7 @@ export default function App({ navigation }) {
   const captureOnce = useCallback(async () => {
     if (!cameraRef.current || wsRef.current?.readyState !== WebSocket.OPEN) return;
     setScanning(true);
-    setResult(null);
+    // setResult([]);
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, skipProcessing: true });
       const photoWidth = photo.height;
@@ -305,6 +307,8 @@ export default function App({ navigation }) {
         </Text>
       </View>
 
+      
+
       {/* ── Add Person button (top strip, only when connected) ── */}
           {isConnected && (
         <SafeAreaView style={{ position: "absolute", top: isTablet ? 80 : 70, left: 0, right: 0, zIndex: 8, alignItems: isLandscape ? "flex-start" : "center", paddingLeft: isLandscape ? sp(2.5) : 0 , marginTop: StatusBar.currentHeight+ 5 }}>
@@ -330,67 +334,156 @@ export default function App({ navigation }) {
               borderRadius: sp(1.5), paddingVertical: sp(1.2), paddingHorizontal: sp(2),
               borderWidth: 1, borderColor: "rgba(14,165,233,0.28)",
             }}
-            onPress={() => setVisibleManual(true)} activeOpacity={0.85}>
+            onPress={() => setVisibleManualSearch(true)} activeOpacity={0.85}>
             <Text style={{ color: "#0EA5E9", fontSize: fs(14), fontWeight: "600" }}>Manual Search</Text>
-          </TouchableOpacity>
-              </View>
-              </SafeAreaView>
+            </TouchableOpacity>
+            
+          </View>
+          
+        </SafeAreaView>
+        
       )}
 
       {/* ── Result Card ── */}
-      {result && (
-        <Animated.View style={[resultCardStyle, { opacity: fadeAnim, transform: [{ translateY: resultSlide }] }]}>
-          <View style={{
-            backgroundColor: "rgba(15,23,40,0.96)",
-            borderRadius: sp(2.5),
-            borderWidth: 1, borderColor: "rgba(14,165,233,0.2)",
-            padding: sp(2.5),
-            marginBottom: StatusBar.currentHeight + 5,
-            shadowColor: "#0EA5E9", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10,
-            
-          }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: sp(1), marginBottom: sp(1.5) }}>
-              <Text style={{ fontSize: fs(11), color: "#475569", fontWeight: "700", textTransform: "uppercase", letterSpacing: 1.2 }}>Scan Result</Text>
-            </View>
+{result.length > 0 && (
+  <Animated.View style={[resultCardStyle, { opacity: fadeAnim, transform: [{ translateY: resultSlide }] }]}>
 
-            <Text style={{ fontSize: fs(22), fontWeight: "800", color: "#F0F9FF", letterSpacing: -0.5, marginBottom: sp(2) }} numberOfLines={2}>
-              {result?.department ?? "Please Try Again"}
+    {/* ── Collapsed pill (shown when hidden) ── */}
+    {!show_results && (
+      <TouchableOpacity
+        onPress={() => setShow_results(true)}
+        activeOpacity={0.85}
+        style={{
+          flexDirection: "row", alignItems: "center", gap: sp(1),
+          backgroundColor: "rgba(15,23,40,0.97)",
+          borderRadius: 30,
+          borderWidth: 1, borderColor: "rgba(14,165,233,0.22)",
+          paddingVertical: sp(1.1), paddingHorizontal: sp(1.8),
+          alignSelf: "center",
+          marginBottom: sp(10),
+        }}
+      >
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#0EA5E9" }} />
+        <Text style={{ fontSize: fs(12), color: "#38bdf8", fontWeight: "600" }}>
+          {result.length} result{result.length !== 1 ? "s" : ""} — tap to show
+        </Text>
+        <Text style={{ fontSize: fs(11), color: "#38bdf8" }}>▴</Text>
+      </TouchableOpacity>
+    )}
+
+    {/* ── Expanded card ── */}
+    {show_results && (
+      <View style={{
+        backgroundColor: "rgba(15,23,40,0.97)",
+        borderRadius: sp(2.2),
+        borderWidth: 1,
+        borderColor: "rgba(14,165,233,0.18)",
+        padding: sp(2),
+        marginBottom: (StatusBar.currentHeight ?? 0) + 5,
+      }}>
+
+        {/* Header row */}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: sp(1.75) }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: sp(0.8) }}>
+            <Text style={{ fontSize: fs(10), color: "#475569", fontWeight: "700", textTransform: "uppercase", letterSpacing: 1.4 }}>
+              Scan Results
             </Text>
-
-            {confidencePercent && (
-              <>
-                <View style={{ flexDirection: "row", backgroundColor: "rgba(8,13,20,0.6)", borderRadius: sp(1.5), padding: sp(1.8) }}>
-                  {/* <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: fs(10), color: "#475569", fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Name</Text>
-                    <Text style={{ fontSize: fs(14), color: "#F0F9FF", fontWeight: "600" }} numberOfLines={1}>{result?.name ?? "Unknown"}</Text>
-                  </View>
-                  <View style={{ width: 1, backgroundColor: "rgba(148,163,184,0.15)", marginHorizontal: sp(2) }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: fs(10), color: "#475569", fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Confidence</Text>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: confidenceColor }} />
-                      <Text style={{ fontSize: fs(14), fontWeight: "700", color: confidenceColor }}>{confidencePercent}</Text>
-                    </View>
-                  </View> */}
-                  <ScrollView style={styles.resultsList}>
-                    {results.map(r => (
-                      <View key={r.id} style={styles.resultCard}>
-                        <Text style={styles.name}>{r.name}</Text>
-                        <Text style={styles.department}>{r.department}</Text>
-                      </View>
-                    ))}
-                  </ScrollView>
-                </View>
-                <TouchableOpacity
-                  onPress={() => setVisible(true)} activeOpacity={0.85}
-                  style={{ marginTop: sp(1.5), backgroundColor: "rgba(14,165,233,0.12)", borderRadius: sp(1.2), paddingVertical: sp(1.2), alignItems: "center", borderWidth: 1, borderColor: "rgba(14,165,233,0.25)" }}>
-                  <Text style={{ color: "#0EA5E9", fontSize: fs(13), fontWeight: "600" }}>Edit Person</Text>
-                </TouchableOpacity>
-              </>
-            )}
+            {/* Count badge */}
+            <View style={{ backgroundColor: "rgba(14,165,233,0.15)", borderRadius: 20, borderWidth: 1, borderColor: "rgba(14,165,233,0.25)", paddingHorizontal: sp(0.9), paddingVertical: 2 }}>
+              <Text style={{ fontSize: fs(10), color: "#38bdf8", fontWeight: "700" }}>{result.length}</Text>
+            </View>
           </View>
-        </Animated.View>
-      )}
+
+          {/* Hide toggle */}
+          <TouchableOpacity
+            onPress={() => setShow_results(false)}
+            activeOpacity={0.85}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 5,
+              backgroundColor: "rgba(255,255,255,0.05)",
+              borderRadius: sp(1), borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+              paddingHorizontal: sp(1.2), paddingVertical: sp(0.7),
+            }}
+          >
+            <Text style={{ fontSize: fs(11), color: "#64748b", fontWeight: "600" }}>Hide</Text>
+            <Text style={{ fontSize: fs(11), color: "#64748b" }}>▾</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Vertical scroll list */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ maxHeight: sp(28) }}
+          contentContainerStyle={{ gap: sp(1) }}
+        >
+          {result.map((r) => {
+            const conf = r.confidence ?? 0;
+            const confColor = conf >= 0.7 ? "#22c55e" : conf >= 0.45 ? "#f59e0b" : "#ef4444";
+            const confPct = `${Math.round(conf * 100)}%`;
+
+            return (
+              <View
+                key={r?.id ?? r.name}
+                style={{
+                  backgroundColor: "rgba(8,13,20,0.65)",
+                  borderRadius: sp(1.5),
+                  padding: sp(1.5),
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.05)",
+                }}
+              >
+                <Text style={{ fontSize: fs(14), color: "#F0F9FF", fontWeight: "600", marginBottom: sp(0.75) }} numberOfLines={1}>
+                  {r.name ?? "Unknown"}
+                </Text>
+
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: sp(0.8), marginBottom: sp(1) }}>
+                  {[
+                    { label: "Department", value: r.department },
+                    { label: "School", value: r.school },
+                  ].map(({ label, value }) => (
+                    <View key={label} style={{ width: "47%" }}>
+                      <Text style={{ fontSize: fs(9), color: "#475569", fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 2 }}>
+                        {label}
+                      </Text>
+                      <Text style={{ fontSize: fs(11), color: "#CBD5E1", fontWeight: "500" }} numberOfLines={1}>
+                        {value ?? "—"}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={{ flexDirection: "row", alignItems: "center", gap: sp(0.75), marginBottom: sp(1) }}>
+                  <View style={{ flex: 1, height: 3, backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 2 }}>
+                    <View style={{ width: confPct, height: 3, backgroundColor: confColor, borderRadius: 2 }} />
+                  </View>
+                  <Text style={{ fontSize: fs(10), color: confColor, fontWeight: "700", minWidth: 30, textAlign: "right" }}>
+                    {confPct}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => { setForm({ id: r.id, name: r.name, department: r.department, building: r.building, room: r.room, school: r.school }); setVisible(true); }}
+                  activeOpacity={0.85}
+                  style={{
+                    backgroundColor: "rgba(14,165,233,0.09)",
+                    borderRadius: sp(1),
+                    paddingVertical: sp(1),
+                    alignItems: "center",
+                    borderWidth: 1,
+                    borderColor: "rgba(14,165,233,0.2)",
+                  }}
+                >
+                  <Text style={{ color: "#0EA5E9", fontSize: fs(12), fontWeight: "600" }}>Edit person</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
+    )}
+  </Animated.View>
+)}
+      
 
       {/* ── Error / Status banners ── */}
       {error && (
@@ -474,7 +567,7 @@ export default function App({ navigation }) {
           {/* Clear */}
           <TouchableOpacity
             style={{ alignItems: "center", gap: sp(0.8), minWidth: sp(9), opacity: (result || error || statusMsg) ? 1 : 0.3 }}
-            onPress={() => { setResult(null); setError(null); setStatusMsg(null); setForm({ name: null, department: null, building: null, room: null, school: null }); }}
+            onPress={() => { setResult([]); setError(null); setStatusMsg(null); setForm({ name: null, department: null, building: null, room: null, school: null }); }}
             disabled={!result && !error && !statusMsg}
             activeOpacity={0.85}>
             <View style={{
@@ -497,6 +590,10 @@ export default function App({ navigation }) {
             <Text style={{ color: "#94A3B8", fontSize: fs(14), fontWeight: "600", letterSpacing: 0.4 }}>← Back</Text>
           </TouchableOpacity>
         )}
+
+        {!show_results && (<View style={{ padding: sp(2) }}>
+        <Text style={{ color: "#94A3B8", fontSize: fs(13), fontWeight: "500" }}>^</Text>
+      </View>)}
       </SafeAreaView>
 
       {/* ── Add / Edit Person Modal ── */}
@@ -571,7 +668,7 @@ export default function App({ navigation }) {
           </Modal>
           
           {/* ── Manually Search Person Modal ── */}
-      <Modal visible={visibleManual} animationType="slide" transparent statusBarTranslucent>
+      <Modal visible={visibleManualSearch} animationType="slide" transparent statusBarTranslucent>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "flex-end", marginBottom: StatusBar.currentHeight + 5 }}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}>
             <View style={{
@@ -602,12 +699,12 @@ export default function App({ navigation }) {
 
               <TouchableOpacity
                 style={{ backgroundColor: "#0EA5E9", borderRadius: sp(1.8), paddingVertical: sp(2), alignItems: "center", marginBottom: sp(1.5) }}
-                onPress={() => { setVisibleManual(false); searchPerson(); }} activeOpacity={0.85}>
+                onPress={() => { setVisibleManualSearch(false); searchPerson(); }} activeOpacity={0.85}>
                 <Text style={{ color: "#fff", fontSize: fs(16), fontWeight: "700" }}>Search</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ borderRadius: sp(1.8), paddingVertical: sp(2), alignItems: "center", borderWidth: 1, borderColor: "rgba(148,163,184,0.18)" }}
-                onPress={() => setVisibleManual(false)} activeOpacity={0.85}>
+                onPress={() => setVisibleManualSearch(false)} activeOpacity={0.85}>
                 <Text style={{ color: "#64748B", fontSize: fs(16), fontWeight: "600" }}>Cancel</Text>
               </TouchableOpacity>
             </View>
