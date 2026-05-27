@@ -469,8 +469,7 @@ export default function App({ navigation }) {
                     {confPct}
                   </Text>
                 </View>
-{                  console.log(r)
-}                <TouchableOpacity
+                <TouchableOpacity
                   onPress={() => { setForm({ id: r.id, name: r.name, department: r.department, building: r.building, room: r.room, school: r.school }); setEditVisible(true); }}
                   activeOpacity={0.85}
                   style={{
