@@ -65,6 +65,7 @@ export default function App({ navigation }) {
   const [statusMsg, setStatusMsg] = useState(null);
   const [visible, setVisible] = useState(false);
   const [visibleManualSearch, setVisibleManualSearch] = useState(false);
+  const [editVisible, setEditVisible] = useState(false);
     const [form, setForm] = useState({ id: null, name: null, department: null, building: null, room: null, school: null });
     const [search, setSearch] = useState(null);
     const [show_results, setShow_results] = useState(true);
@@ -108,30 +109,33 @@ export default function App({ navigation }) {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     setWsStatus("connecting");
     setError(null);
-    setShow_results(true);
     const ws = new WebSocket(WS_URL);
     ws.onopen = () => { setWsStatus("connected"); setError(null); console.log("WebSocket connected"); };
     ws.onmessage = (e) => {
       try {
           const data = JSON.parse(e.data);
           console.log(data)
+          setError(null);
+          setStatusMsg(null);
+          console.log("received data:", data);
         if (data.department !== undefined) {
           setResult(prev => {
             if (prev.some(r => r.id === data.id)) return prev; 
-            return [...prev, {  id: data.id ?? null, name: data.name ?? null, department: data.department, building: data.building ?? null, room: data.room ?? null, school: data.school ?? null, confidence: data.confidence }];
+            return [ {  id: data.id ?? null, name: data.name ?? null, department: data.department, building: data.building ?? null, room: data.room ?? null, school: data.school ?? null, confidence: data.confidence }, ...prev];
           });
           setForm({ name: data.name ?? null, department: data.department, building: data.building ?? null, room: data.room ?? null, school: data.school ?? null });
+          setShow_results(true);
         } else if (data.error) {
           setError(data.error);
         } else if (data.text) {
-          setResult(prev => [...prev, { department: data.text, confidence: null, name: data.name ?? null }]);
+          setResult(prev => [ { department: data.text, confidence: null, name: data.name ?? null }, ...prev]);
         } else if (data.status) {
           setStatusMsg(data.status);
         } else if (data === null) {
             setError('Person Not Found')
         }
       } catch {
-        setResult(prev => [...prev, { department: e?.data ?? 'Person not found', confidence: null }]);
+        setResult(prev => [ { department: e?.data ?? 'Person not found', confidence: null, name: null }, ...prev ]);
       }
     };
     ws.onerror = () => { setWsStatus("error"); setError("Connection error. Please try again."); };
@@ -145,6 +149,11 @@ export default function App({ navigation }) {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return;
     wsRef.current.send(JSON.stringify({ addPerson: true, ...form }));
     // setForm({ id: "", name: "", department: "", building: "", room: "", school: "" });
+  }, [form]);
+
+  const editPerson = useCallback(() => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({ editPerson: true, ...form }));
   }, [form]);
     
     const searchPerson = useCallback(() => {
@@ -460,9 +469,9 @@ export default function App({ navigation }) {
                     {confPct}
                   </Text>
                 </View>
-
-                <TouchableOpacity
-                  onPress={() => { setForm({ id: r.id, name: r.name, department: r.department, building: r.building, room: r.room, school: r.school }); setVisible(true); }}
+{                  console.log(r)
+}                <TouchableOpacity
+                  onPress={() => { setForm({ id: r.id, name: r.name, department: r.department, building: r.building, room: r.room, school: r.school }); setEditVisible(true); }}
                   activeOpacity={0.85}
                   style={{
                     backgroundColor: "rgba(14,165,233,0.09)",
@@ -596,7 +605,52 @@ export default function App({ navigation }) {
       </View>)}
       </SafeAreaView>
 
-      {/* ── Add / Edit Person Modal ── */}
+      <Modal visible={editVisible} animationType="slide" transparent statusBarTranslucent>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "flex-end", marginBottom: StatusBar.currentHeight + 5 }}>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}>
+            <View style={{
+              backgroundColor: "#0F1929",
+              borderTopLeftRadius: sp(3), borderTopRightRadius: sp(3),
+              paddingTop: sp(3), paddingHorizontal: sp(3), paddingBottom: sp(5),
+              borderTopWidth: 1, borderColor: "rgba(14,165,233,0.15)",
+            }}>
+              {/* Handle */}
+              <View style={{ width: 38, height: 4, borderRadius: 2, backgroundColor: "rgba(148,163,184,0.25)", alignSelf: "center", marginBottom: sp(2.5) }} />
+              <Text style={{ fontSize: fs(22), fontWeight: "800", color: "#F0F9FF", letterSpacing: -0.4, marginBottom: 4 }}>{form?.name ? "Edit Person" : "Add Person"}</Text>
+              <Text style={{ fontSize: fs(14), color: "#475569", marginBottom: sp(3) }}>{form?.name ? "Update the person's details below" : "Enter the person's details below"}</Text>
+              <Text style={{ fontSize: fs(11), fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: sp(0.8) }}>Building</Text>
+              <TextInput
+                placeholder="Enter building…" placeholderTextColor="#334155"
+                value={form?.building ?? ""}
+                onChangeText={(t) => setForm({ ...form, building: t })}
+                style={{ backgroundColor: "rgba(8,13,20,0.9)", borderRadius: sp(1.5), paddingVertical: sp(1.6), paddingHorizontal: sp(2), fontSize: fs(15), color: "#F0F9FF", borderWidth: 1, borderColor: "rgba(148,163,184,0.15)" }}
+              />
+              <Text style={{ fontSize: fs(11), fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: sp(0.8), marginTop: sp(2) }}>Room</Text>
+              <TextInput
+                placeholder="Enter room…" placeholderTextColor="#334155"
+                value={form?.room ?? ""}
+                onChangeText={(t) => setForm({ ...form, room: t })}
+                style={{ backgroundColor: "rgba(8,13,20,0.9)", borderRadius: sp(1.5), paddingVertical: sp(1.6), paddingHorizontal: sp(2), fontSize: fs(15), color: "#F0F9FF", borderWidth: 1, borderColor: "rgba(148,163,184,0.15)" }}
+              />
+
+              <Text style={{ fontSize: fs(11), fontWeight: "700", color: "#64748B", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: sp(0.8), marginTop: sp(2) }}>Department</Text>
+              <TextInput
+                placeholder="Enter department…" placeholderTextColor="#334155"
+                value={form?.department ?? ""}
+                onChangeText={(t) => setForm({ ...form, department: t })}
+                style={{ backgroundColor: "rgba(8,13,20,0.9)", borderRadius: sp(1.5), paddingVertical: sp(1.6), paddingHorizontal: sp(2), fontSize: fs(15), color: "#F0F9FF", borderWidth: 1, borderColor: "rgba(148,163,184,0.15)" }}
+              />
+            </View>
+            <TouchableOpacity
+              style={{ backgroundColor: "#0EA5E9", borderRadius: sp(1.8), paddingVertical: sp(2), alignItems: "center", margin: sp(3) }}
+              onPress={() => { editPerson(form); setEditVisible(false); }}
+            >
+              <Text style={{ color: "#F0F9FF", fontSize: fs(15), fontWeight: "600" }}>{form?.name ? "Save Changes" : "Add Person"}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+      {/* ── Add Person Modal ── */}
       <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "flex-end" , marginBottom: StatusBar.currentHeight + 5 }}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}>

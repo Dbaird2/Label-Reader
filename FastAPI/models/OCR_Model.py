@@ -15,10 +15,10 @@ class AddPersonModel(BaseModel):
     department: str
 
 class EditPersonModel(BaseModel):
-    addPerson: bool = Field(..., description="Flag to indicate this is a request to add a person")
+    editPerson: bool = Field(..., description="Flag to indicate this is a request to edit a person")
     name: str
-    building: str | None
-    room: str | None
+    building: Optional[str] = None
+    room: Optional[str] = None
     school: str
     department: str
     id: int

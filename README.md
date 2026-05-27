@@ -102,7 +102,7 @@ CREATE INDEX person_name_trgm_idx ON person USING GIN (name gin_trgm_ops);
 ## Deployment
 
 - **Backend** — Railway (verify EasyOCR model size fits within plan limits)
-- **Database** — Railway PostgreSQL add-on or managed Postgres (Supabase, Neon, etc.)
+- **Database** — Postgres via Supabase
 - **Mobile** — Distribute via Expo Go for internal testing; build with `eas build` for production
 
 ---
