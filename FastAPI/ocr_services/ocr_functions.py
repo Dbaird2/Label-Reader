@@ -131,4 +131,11 @@ async def get_results(img_bytes: bytes) -> OCRResult:
     candidates = get_candidates(filtered)
     best_match = await find_best_match(candidates)
 
+    if not best_match:
+        logger.info("No good match found for candidates: %s", candidates)
+        return {'error': 'No good match found'}
+    else:
+        logger.info("Best match found: %s", best_match)
+
+
     return OCRResult(**(best_match or {}))
