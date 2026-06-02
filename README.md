@@ -11,7 +11,6 @@
 |----------|------|-------|
 | High | Polish code into clean code | |
 | High | Modularize the React Native app codebase | Break screens into focused components and services |
-| High | Add CI/CD pipeline with main branch protection | Require PRs, block merges on failed pipeline |
 | Medium | Create/Use more Pydantic models on/for returns | |
 
 ---
