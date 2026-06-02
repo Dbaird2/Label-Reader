@@ -25,8 +25,6 @@
       },
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
       "edgeToEdgeEnabled": true,
@@ -42,6 +40,11 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fcaa73e9-f1e3-4119-8094-d85ef1852780"
+      }
     }
   }
 }
