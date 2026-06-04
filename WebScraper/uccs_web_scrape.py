@@ -107,9 +107,7 @@ async def card_directory_scrape(pool, url, dept):
         if '.' in name:
             name = name.replace('.', '')  
         print(name.strip())
-        if not await check_person_exists(pool, name):
-            await insert_person(pool, name.upper(), dept)
-        
+        if not await check_person_exists(pool, name):        
             await insert_person(pool, name.text.strip().upper(), dept)
 
 async def phone_directory_scrape(pool, url, dept):
