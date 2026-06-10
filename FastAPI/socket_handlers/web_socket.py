@@ -99,7 +99,7 @@ async def handle_ocr(websocket: WebSocket, data: dict):
     if not result:
         await websocket.send_json({"error": "Processing failed"})
         return
-    
+        
     if "error" in result:
         await websocket.send_json(result)
         return

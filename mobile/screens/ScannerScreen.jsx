@@ -1442,19 +1442,39 @@ export default function App({ navigation }) {
                 borderRadius: sp(1.8),
                 paddingVertical: sp(2),
                 alignItems: "center",
-                margin: sp(3),
+                marginBottom: sp(1.5),
               }}
               onPress={() => {
-                editPerson(form);
                 setEditVisible(false);
-              }}>
+                editPerson(form);
+              }}
+              activeOpacity={0.85}>
               <Text
                 style={{
-                  color: "#F0F9FF",
-                  fontSize: fs(15),
+                  color: "#fff",
+                  fontSize: fs(16),
+                  fontWeight: "700",
+                }}>
+                Save Person
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                borderRadius: sp(1.8),
+                paddingVertical: sp(2),
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: "rgba(148,163,184,0.18)",
+              }}
+              onPress={() => setEditVisible(false)}
+              activeOpacity={0.85}>
+              <Text
+                style={{
+                  color: "#64748B",
+                  fontSize: fs(16),
                   fontWeight: "600",
                 }}>
-                {form?.name ? "Save Changes" : "Add Person"}
+                Cancel
               </Text>
             </TouchableOpacity>
           </ScrollView>

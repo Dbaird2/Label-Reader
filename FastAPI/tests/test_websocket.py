@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock
+from models.OCR_Model import OCRResult, AddPersonModel, EditPersonModel, SearchPersonModel
 from main import app
 import os
 import base64

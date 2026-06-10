@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Literal, Optional
 
 class OCRModel(BaseModel):
     ocr: bool = Field(..., description="Flag to indicate this is an OCR request")
@@ -7,15 +7,15 @@ class OCRModel(BaseModel):
 
 
 class AddPersonModel(BaseModel):
-    addPerson: bool = Field(..., description="Flag to indicate this is a request to add a person")
+    addPerson: Literal[True] = True
     name: str
-    building: str | None
-    room: str | None
+    building: str | None = None
+    room: str | None = None
     school: str
     department: str
 
 class EditPersonModel(BaseModel):
-    editPerson: bool = Field(..., description="Flag to indicate this is a request to edit a person")
+    editPerson: Literal[True] = True
     name: str
     building: Optional[str] = None
     room: Optional[str] = None
