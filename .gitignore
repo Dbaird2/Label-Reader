@@ -180,4 +180,5 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-mobile/andoird
+mobile/android/
+mobile/ios/
