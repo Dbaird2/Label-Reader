@@ -10,7 +10,7 @@ import re
 import state
 import asyncio
 import easyocr
-from services.AI_agent import get_agent
+from services.AI_agent import agent
 
 reader = easyocr.Reader(['en'], gpu=False)
 
@@ -150,7 +150,6 @@ async def get_results(img_bytes: bytes) -> OCRResult:
         if os.getenv("PYTEST_CURRENT_TEST"):
             logger.info("Skipping agent call in test environment")
             return OCRResult()
-        agent = get_agent()
         result = await agent.run(ocr_prompt)
         if "insert_person" in result:
              best_match = result["insert_person"]

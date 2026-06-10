@@ -4,7 +4,7 @@ import state
 import os
 from models.OCR_Model import  AddPersonModel
 
-OPEN_AI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "sk-test-dummy-key")
 
 instructions = """
 You help maintain a university staff directory.
@@ -25,16 +25,16 @@ When asked to add a person:
 If building or room cannot be found from an official source,
 set them to null and continue.
 """
-def get_agent():
-    """Lazy-load the agent only when needed."""
-    return Agent(
+agent = Agent(
     "openai:gpt-4.1",
+    api_key=OPENAI_API_KEY,  
     instructions=instructions,
     capabilities=[
         Thinking(),
         WebSearch(local="duckduckgo")
     ]
 )
+
 
 
 @agent.tool
