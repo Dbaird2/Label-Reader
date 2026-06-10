@@ -2,6 +2,8 @@ import pytest
 from ocr_services.ocr_functions import find_best_match, get_candidates, filterString
 from unittest.mock import patch, AsyncMock
 import state
+from models.OCR_Model import OCRResult, AddPersonModel, EditPersonModel, SearchPersonModel
+
 
 @pytest.mark.asyncio
 async def test_find_best_match():
