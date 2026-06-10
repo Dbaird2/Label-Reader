@@ -21,5 +21,4 @@ pytest
 psycopg2-binary
 httpx
 websockets
-anthropic
-aiohttp
+pydantic-ai[examples]
