@@ -26,7 +26,7 @@ If building or room cannot be found from an official source,
 set them to null and continue.
 """
 agent = Agent(
-    "openai:gpt-4.1",
+    "gemini-2.0-flash",
     instructions=instructions,
     capabilities=[
         Thinking(),
