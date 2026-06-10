@@ -27,7 +27,6 @@ set them to null and continue.
 """
 agent = Agent(
     "openai:gpt-4.1",
-    api_key=OPENAI_API_KEY,  
     instructions=instructions,
     capabilities=[
         Thinking(),
