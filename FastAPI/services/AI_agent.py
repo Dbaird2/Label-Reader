@@ -1,8 +1,8 @@
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.capabilities import Thinking, WebSearch
 import state
-from models import AddPersonModel
 import os
+from models.OCR_Model import  AddPersonModel
 
 
 instructions = """
