@@ -22,3 +22,4 @@ psycopg2-binary
 httpx
 websockets
 pydantic-ai[examples]
+pydantic-ai-slim[duckduckgo]
