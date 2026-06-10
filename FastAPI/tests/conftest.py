@@ -5,3 +5,5 @@ from unittest.mock import patch, MagicMock
 
 sys.modules['easyocr'] = MagicMock()
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + '/..'))
+sys.modules["services.AI_agent"].agent = MagicMock()
+os.environ["OPENAI_API_KEY"] = "sk-test-dummy-key-for-testing"
