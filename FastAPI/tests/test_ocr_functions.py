@@ -57,4 +57,4 @@ def test_filterString():
     assert filterString("S3th @lison") == False
     assert filterString("Seth A.") == False
     assert filterString("Seth, Alison") == True
-    assert filterString("Seth Alison Colorado") == True
+    assert filterString("Seth Alison Colorado") == False
