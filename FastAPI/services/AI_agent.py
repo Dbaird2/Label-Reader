@@ -1,50 +1,37 @@
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.capabilities import Thinking, WebSearch
 import state
-import os
-from models.OCR_Model import  OCRResult
+from models.OCR_Model import  AddPersonModel
 import logging
-from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
+instructions = """
+You are a UCCS directory lookup assistant. When given a person's name:
+
+1. Find their department and building location in the UCCS directory
+2. Call insert_person with: name, department, building, and room (if available)
+3. Return the complete person record
+
+Only use official UCCS directory information. If you cannot find the person, say "Not found".
+Do NOT guess or make up information.
+"""
+
 agent = Agent(
     "gemini-2.0-flash",
-    instructions="""
-You are a university directory lookup assistant. When given a person's name:
-
-1. Search the web for their official university profile
-2. Look for: Full name, Department, Building/Office location, Room number
-3. Return ONLY information from official university sources
-
-Return your findings as JSON with: name, department, building, room
-If you cannot find the person, return: {{"status": "not_found"}}
-""",
-    result_type=OCRResult,  
-    capabilities=[
-        Thinking(),
-        WebSearch(local="duckduckgo")
-    ]
+    instructions=instructions
 )
 
-async def use_AI_agent(candidates: list[str], university: str) -> OCRResult:
-    """Use LLM agent to find person via web search"""
-    ocr_prompt = f"Find {', '.join(candidates)} at {university}..."
-    
+@agent.tool
+async def insert_person(
+    ctx: RunContext,
+    person: AddPersonModel
+) -> dict:
     try:
-        result = await agent.run(ocr_prompt)
-        # result is now a UniversityPerson object
-        
-        if not result or not result.name:
-            logger.info("Agent did not find a match")
-            return OCRResult()
-        
-        # Insert to database
-        state.db.upsertPerson(result)
-        
-        logger.info("Agent found person: %s", result)
-        return OCRResult(**result.model_dump())
-        
+        state.db.upsertPerson(person)
+        return {
+            "status": "success",
+            "person": person.model_dump()
+        }    
     except Exception as e:
-        logger.error("Agent lookup failed: %s", e, exc_info=True)
-        return OCRResult()
+        logger.error("Error inserting person: %s", e)
+        return {"status": "error", "error": str(e)}
