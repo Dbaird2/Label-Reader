@@ -19,8 +19,8 @@ Do NOT guess or make up information.
 
 agent = Agent(
     "gpt-4o-mini", 
-    instructions=instructions, 
-    api_key=os.getenv("OPENAI_API_KEY"))
+    instructions=instructions 
+)
 
 
 
