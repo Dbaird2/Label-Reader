@@ -13,7 +13,7 @@ def get_test_image(filename):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
-def test_websocket_ocr():
+async def test_websocket_ocr():
     fake_ocr = [(None, "Seth Alison", 0.95)]
     fake_db = {"name": "Seth Alison", "department": "Theatreworks", "building": "Arts Center", "confidence": 0.91}
 
