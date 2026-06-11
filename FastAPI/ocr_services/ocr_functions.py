@@ -125,6 +125,7 @@ async def find_best_match(candidates: list) -> dict | None:
 
 
 async def get_results(img_bytes: bytes) -> OCRResult:
+    university = "UCCS"
     img_bytes = preprocess_label(img_bytes) 
     raw = await run_easy_ocr(img_bytes)
 
@@ -139,26 +140,40 @@ async def get_results(img_bytes: bytes) -> OCRResult:
         return OCRResult() 
 
     best_match = await find_best_match(candidates)
-    # Skip agent in test environment
+    logger.info("Best DB match: %s", best_match)
+
+    # Return DB match if confident enough
+    if best_match and best_match["confidence"] >= 0.4:
+        logger.info("DB match above confidence threshold, returning result")
+        return OCRResult(**best_match)
+
+    # In tests, don't call the agent
     if os.getenv("PYTEST_CURRENT_TEST"):
-        logger.info("Skipping agent call in test environment, returning DB match")
+        logger.info("Skipping agent in test, returning low-confidence DB match or empty")
         if best_match:
             return OCRResult(**best_match)
+        return OCRResult()
+    
+    return await use_AI_agent(candidates, university)
+    
+    
+    
+async def use_AI_agent(candidates, university):
+    ocr_prompt = f"Find {', '.join(candidates)} in the {university} directory..."
+    try:
+        result = await agent.run(ocr_prompt)
+        logger.info("Agent raw result: %s", result)
+        best_match = extract_inserted_person(result)
+        logger.info("Extracted person from agent result: %s", best_match)
+        if best_match:
+            # ... validation here ...
+            return OCRResult(**best_match)
         else:
+            logger.info("Agent did not find a match")
             return OCRResult()
-    ocr_prompt = f"Find and add this person to the university directory: {', '.join(candidates)}"
-    result = await agent.run(ocr_prompt)
-    logger.info("Agent raw result: %s", result)
-    # Extract the person data that was inserted
-    best_match = extract_inserted_person(result)
-    logger.info("Agent result: %s", result)
-    if best_match:
-        logger.info("Agent added person: %s", best_match)
-        return OCRResult(**best_match)
-    else:
-        logger.info("Agent did not find a match, returning empty result")
-        return OCRResult({})
-
+    except Exception as e:
+        logger.error("Agent call failed: %s", e)
+        return OCRResult()
 
 def extract_inserted_person(result) -> dict | None:
     """Extract the person dict returned from insert_person tool"""
