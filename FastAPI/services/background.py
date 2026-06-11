@@ -9,7 +9,7 @@ async def repeatInsert():
     logger.info("repeatInsert loop started")
 
     while True:
-        await asyncio.sleep(3600)
+        await asyncio.sleep(360000)
 
 
 
