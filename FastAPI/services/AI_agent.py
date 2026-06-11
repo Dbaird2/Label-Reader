@@ -7,24 +7,23 @@ from models.OCR_Model import  AddPersonModel
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "sk-test-dummy-key")
 
 instructions = """
-You help maintain a university staff directory.
+You are a university directory lookup assistant. When given a person's name:
 
-When asked to add a person:
+1. Search the web for their official university profile using web search
+2. Look for:
+   - Full name (required)
+   - Department (required)
+   - School/College (required and given)
+   - Building/Office location (optional)
+   - Room number (optional)
+3. Only extract information from OFFICIAL university sources (staff directory, department pages)
+4. Call insert_person with the extracted information
+5. Return the complete person record
 
-1. Search the web for the person's official university profile.
-2. Extract:
-   - name
-   - department
-   - school
-   - building (if available)
-   - room (if available)
-3. Only use information from official university sources.
-4. If multiple people match or confidence is below 80%, ask for clarification.
-5. When sufficient information is available, call insert_person.
-
-If building or room cannot be found from an official source,
-set them to null and continue.
+If you cannot find the person on the web after searching, say "Not found".
+Always attempt the web search before giving up.
 """
+
 agent = Agent(
     "gemini-2.0-flash",
     instructions=instructions,

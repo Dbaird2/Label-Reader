@@ -139,22 +139,27 @@ async def get_results(img_bytes: bytes) -> OCRResult:
         return OCRResult() 
 
     best_match = await find_best_match(candidates)
-    ocr_prompt = f"""
-        From OCR candidates:
-        {candidates}
+    ocr_prompt = f"Find and add this person to the university directory: {', '.join(candidates)}"
 
-        Extract the most likely person and insert into database if confidence > 0.8.
-        Otherwise ask for clarification.
-        """
-    if not best_match:
-        if os.getenv("PYTEST_CURRENT_TEST"):
-            logger.info("Skipping agent call in test environment")
-            return OCRResult()
-        result = await agent.run(ocr_prompt)
-        if "insert_person" in result:
-             best_match = result["insert_person"]
+    result = await agent.run(ocr_prompt)
+    
+    # Extract the person data that was inserted
+    best_match = extract_inserted_person(result)
+    
+    if best_match:
+        logger.info("Agent added person: %s", best_match)
+        return OCRResult(**best_match)
     else:
-        logger.info("Best match found: %s", best_match)
+        logger.warning("Agent could not find person on web")
+        return OCRResult()
 
 
-    return OCRResult(**(best_match or {}))
+def extract_inserted_person(result) -> dict | None:
+    """Extract the person dict returned from insert_person tool"""
+    for message in result.all_messages():
+        # Look for the tool_return from insert_person
+        if hasattr(message, 'tool_name') and message.tool_name == 'insert_person':
+            # tool_return is the dict returned by the @agent.tool
+            if isinstance(message.tool_return, dict):
+                return message.tool_return.get("person")
+    return None
