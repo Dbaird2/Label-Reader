@@ -73,8 +73,10 @@ def filterString(string: str) -> bool:
         return False
     if re.search(r'\d', string):
         return False
-    # if 'colorado' in string.lower():
-    #     return False
+    if 'colorado' in string.lower():
+        return False
+    if 'uccs' in string.lower():
+        return False
     alpha_ratio = sum(c.isalpha() for c in string) / len(string)
     if alpha_ratio < 0.6:
         return False

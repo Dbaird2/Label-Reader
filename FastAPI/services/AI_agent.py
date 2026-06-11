@@ -2,6 +2,7 @@ from pydantic_ai import Agent, RunContext
 import state
 from models.OCR_Model import  AddPersonModel
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,11 @@ Do NOT guess or make up information.
 """
 
 agent = Agent(
-    "gemini-2.0-flash",
-    instructions=instructions
-)
+    "gpt-4o-mini", 
+    instructions=instructions, 
+    api_key=os.getenv("OPENAI_API_KEY"))
+
+
 
 @agent.tool
 async def insert_person(
