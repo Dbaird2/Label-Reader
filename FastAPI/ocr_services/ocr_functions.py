@@ -148,13 +148,16 @@ async def get_results(img_bytes: bytes) -> OCRResult:
             return OCRResult()
     ocr_prompt = f"Find and add this person to the university directory: {', '.join(candidates)}"
     result = await agent.run(ocr_prompt)
-    
+    logger.info("Agent raw result: %s", result)
     # Extract the person data that was inserted
     best_match = extract_inserted_person(result)
-    
+    logger.info("Agent result: %s", result)
     if best_match:
         logger.info("Agent added person: %s", best_match)
         return OCRResult(**best_match)
+    else:
+        logger.info("Agent did not find a match, returning empty result")
+        return OCRResult({})
 
 
 def extract_inserted_person(result) -> dict | None:
