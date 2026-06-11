@@ -2,50 +2,49 @@ from pydantic_ai import Agent, RunContext
 from pydantic_ai.capabilities import Thinking, WebSearch
 import state
 import os
-from models.OCR_Model import  AddPersonModel
+from models.OCR_Model import  OCRResult
+import logging
+from pydantic import BaseModel
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "sk-test-dummy-key")
-
-instructions = """
-You are a university directory lookup assistant. When given a person's name:
-
-1. Search the web for their official university profile using web search
-2. Look for:
-   - Full name (required)
-   - Department (required)
-   - School/College (required and given)
-   - Building/Office location (optional)
-   - Room number (optional)
-3. Only extract information from OFFICIAL university sources (staff directory, department pages)
-4. Call insert_person with the extracted information
-5. Return the complete person record
-
-If you cannot find the person on the web after searching, say "Not found".
-Always attempt the web search before giving up.
-"""
+logger = logging.getLogger(__name__)
 
 agent = Agent(
     "gemini-2.0-flash",
-    instructions=instructions,
+    instructions="""
+You are a university directory lookup assistant. When given a person's name:
+
+1. Search the web for their official university profile
+2. Look for: Full name, Department, Building/Office location, Room number
+3. Return ONLY information from official university sources
+
+Return your findings as JSON with: name, department, building, room
+If you cannot find the person, return: {{"status": "not_found"}}
+""",
+    result_type=OCRResult,  
     capabilities=[
         Thinking(),
         WebSearch(local="duckduckgo")
     ]
 )
 
-
-
-@agent.tool
-async def insert_person(
-    ctx: RunContext,
-    person: AddPersonModel
-) -> dict:
+async def use_AI_agent(candidates: list[str], university: str) -> OCRResult:
+    """Use LLM agent to find person via web search"""
+    ocr_prompt = f"Find {', '.join(candidates)} at {university}..."
+    
     try:
+        result = await agent.run(ocr_prompt)
+        # result is now a UniversityPerson object
         
-        state.db.upsertPerson(person)
-        return {
-                "status": "success",
-                "person": person.model_dump()
-            }    
+        if not result or not result.name:
+            logger.info("Agent did not find a match")
+            return OCRResult()
+        
+        # Insert to database
+        state.db.upsertPerson(result)
+        
+        logger.info("Agent found person: %s", result)
+        return OCRResult(**result.model_dump())
+        
     except Exception as e:
-        return {"error": f"Error occurred while inserting person: {e}"}
+        logger.error("Agent lookup failed: %s", e, exc_info=True)
+        return OCRResult()
