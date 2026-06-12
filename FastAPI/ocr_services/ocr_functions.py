@@ -161,14 +161,13 @@ async def get_results(img_bytes: bytes) -> OCRResult:
     
     
 async def use_AI_agent(candidates, university):
-    ocr_prompt = f"Find {', '.join(candidates)} in the {university} directory..."
+    ocr_prompt = f"Find the following people at {university} and extract their department, building, and room: {', '.join(candidates)}"
     try:
         result = await agent.run(ocr_prompt)
         logger.info("Agent raw result: %s", result)
         best_match = extract_inserted_person(result)
         logger.info("Extracted person from agent result: %s", best_match)
         if best_match:
-            # ... validation here ...
             return OCRResult(**best_match)
         else:
             logger.info("Agent did not find a match")
