@@ -30,7 +30,7 @@ async def insert_person(
     person: AddPersonModel
 ) -> dict:
     try:
-        state.db.upsertPerson(person)
+        await state.db.upsertPerson(person)
         return {
             "status": "success",
             "person": person.model_dump()
