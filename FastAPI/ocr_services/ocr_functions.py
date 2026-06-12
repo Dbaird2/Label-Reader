@@ -180,9 +180,8 @@ async def use_AI_agent(candidates, university):
 def extract_inserted_person(result) -> dict | None:
     """Extract the person dict returned from insert_person tool"""
     for message in result.all_messages():
-        # Look for the tool_return from insert_person
         if hasattr(message, 'tool_name') and message.tool_name == 'insert_person':
-            # tool_return is the dict returned by the @agent.tool
-            if isinstance(message.tool_return, dict):
-                return message.tool_return.get("person")
+            # Now tool_return IS the person dict directly
+            if isinstance(message.tool_return, dict) and "name" in message.tool_return:
+                return message.tool_return
     return None
