@@ -52,14 +52,18 @@ async def search_web(
                     results = await resp.json()
                     content_chunks = []
                     
-                    for result in results.get('Results', [])[:3]:
+                    for result in results.get('Results', [])[:4]:
                         url = result.get('FirstURL')
+                        logger.info("Fetching URL: %s", url)
                         try:
                             async with session.get(url, timeout=5) as page_resp:
+                                logger.info("Fetched URL %s with status %s", url, page_resp.status)
                                 if page_resp.status == 200:
                                     content = await page_resp.text()
+                                    logger.info("Content length for URL %s: %d", url, len(content))
                                     content_chunks.append(content[:2000])
-                        except:
+                        except Exception as e:
+                            logger.error("Error fetching URL %s: %s", url, e)
                             pass
                     
                     return "\n".join(content_chunks) if content_chunks else "No results found"

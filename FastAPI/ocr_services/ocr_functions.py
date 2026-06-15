@@ -156,7 +156,10 @@ async def get_results(img_bytes: bytes) -> OCRResult:
             return OCRResult(**best_match)
         return OCRResult()
     
-    return await use_AI_agent(candidates, university)
+    best_match = await use_AI_agent(candidates, university)
+    if not best_match or not best_match.name:
+        logger.info("Agent did not find a valid match, returning empty result")
+        return OCRResult()
     
     
     
