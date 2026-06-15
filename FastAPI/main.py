@@ -59,9 +59,6 @@ app.add_middleware(
 # Include WebSocket routers
 app.include_router(router)
 
-print("🔥 MAIN.PY IS RUNNING")
-print("🔥 ROUTES:", [r.path for r in app.routes])
-
 @app.get("/ws/ocr-test2")
 def test():
     return {"ok": True}

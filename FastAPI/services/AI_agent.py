@@ -51,7 +51,7 @@ async def search_web(
                 if resp.status == 200:
                     results = await resp.json()
                     content_chunks = []
-                    
+                    logger.info("Received search results for query '%s': %d results", query, len(results.get('Results', [])))
                     for result in results.get('Results', [])[:4]:
                         url = result.get('FirstURL')
                         logger.info("Fetching URL: %s", url)
