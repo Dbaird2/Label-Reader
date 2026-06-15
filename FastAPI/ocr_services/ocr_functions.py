@@ -160,6 +160,8 @@ async def get_results(img_bytes: bytes) -> OCRResult:
     if not best_match or not best_match.name:
         logger.info("Agent did not find a valid match, returning empty result")
         return OCRResult()
+    logger.info("Agent found a match, returning result: %s", best_match)
+    return best_match
     
     
     

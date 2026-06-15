@@ -104,6 +104,8 @@ async def handle_ocr(websocket: WebSocket, data: dict):
         await websocket.send_json(result)
         return
 
+    logger.info("Results: %s", result)
+
     await websocket.send_json(result.model_dump())
 
 
