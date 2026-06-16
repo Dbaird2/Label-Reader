@@ -148,7 +148,7 @@ async def search_person(websocket: WebSocket, data: dict):
         return
 
     result = await state.db.lookupName(search_model.search)
-    if result:
+    if result and result.confidence > 0.35:
         await websocket.send_json(result)
     else:
         best_match = await use_AI_agent(search_model.search, 'UCCS')
