@@ -105,7 +105,9 @@ async def handle_ocr(websocket: WebSocket, data: dict):
         return
 
     logger.info("Results: %s", result)
-
+    if not result.department and not result.name:
+        await websocket.send_json({"status": "No result found"})
+        return
     await websocket.send_json(result.model_dump())
 
 

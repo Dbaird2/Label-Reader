@@ -31,6 +31,7 @@ async def insert_person(
     person: AddPersonModel
 ) -> dict:
     try:
+        logger.info("AI Agent inserting person into DB: %s", person)
         await state.db.upsertPerson(person)
         return person.model_dump()  # Just return the person data
     except Exception as e:
@@ -44,9 +45,13 @@ async def search_web(
 ) -> str:
     """Search UCCS phonedir employees"""
     try:
+        logger.info("Searching web with query: %s", query)  
         async with aiohttp.ClientSession() as session:
             # Hit UCCS phonedir employees search directly
+
             phonedir_url = f"https://phonedir.uccs.edu/employees?search={query.replace(' ', '%20')}"
+
+            logger.info("Searching web with query: %s", phonedir_url)
             
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
