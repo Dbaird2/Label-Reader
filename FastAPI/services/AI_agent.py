@@ -13,13 +13,12 @@ logger = logging.getLogger(__name__)
 system_prompt = """
 You are a UCCS directory lookup assistant. When given a person's name:
 
-1. Use search_web to find the person in the UCCS phonedir employees directory
-2. Parse the search results HTML to extract: name, department, building (if available), room (if available)
-3. Call insert_person with the extracted information: name, department, building, room, school='UCCS'
-4. Return the result from insert_person
-5. If the person is not found in the search results, return: {"found": false}
+1. Use search_api to find the person in the UCCS phonedir API
+2. The search_api tool will automatically extract their information and insert them into the database
+3. Return the result from search_api
+4. If the person is not found, search_api will return: {"found": false}
 
-Important: Only extract information from actual search results. Do not guess or fabricate data.
+Important: Do not call insert_person directly - search_api handles insertion automatically. Only use search_api.
 """
 
 agent = Agent(
@@ -41,32 +40,52 @@ async def insert_person(
         return {"error": str(e)}
     
 @agent.tool
-async def search_web(
+async def search_api(
     ctx: RunContext,
     query: str
 ) -> str:
-    """Search Google for UCCS directory info"""
+    """Search UCCS phone directory API for person info"""
     try:
         async with aiohttp.ClientSession() as session:
-            # Search Google for UCCS directory info
-            search_query = f'"{query}" UCCS site:uccs.edu'
-            google_url = f"https://www.google.com/search?q={quote(search_query)}"
+            api_url = f"https://phonedir.uccs.edu/api/employees?search={quote(query)}"
             
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
-            
-            logger.info("Google search URL: %s", google_url)
-            async with session.get(google_url, headers=headers, timeout=10) as resp:
-                logger.info("Google response status: %s", resp.status)
-                if resp.status == 200:
-                    content = await resp.text()
-                    logger.info("Google response length: %d", len(content))
-                    return content
-                else:
-                    logger.error("Google returned status %s", resp.status)
-                    return f"Search failed (status {resp.status})"
-            
+            logger.info("Searching API: %s", api_url)
+            async with session.get(api_url, timeout=10) as resp:
+                if resp.status != 200:
+                    logger.error("API returned status %s", resp.status)
+                    return f"API search failed (status {resp.status})"
+                
+                data = await resp.json()
+                people = data.get("data", [])
+                
+                if not people:
+                    logger.info("No results found for: %s", query)
+                    return '{"found": false}'
+                
+                # Process first result
+                person = people[0]
+                name_parts = person["name"].split(",")
+                first_name = name_parts[1].strip()
+                last_name = name_parts[0].strip()
+                name = f"{first_name} {last_name}"
+                
+                department = person.get("department", {}).get("dept_name", "")
+                building = person.get("building", "")
+                room = person.get("room", "")
+                
+                logger.info("Found: %s, Dept: %s, Building: %s, Room: %s", name, department, building, room)
+                
+                # Insert into database
+                result = await insert_person(ctx, AddPersonModel(
+                    name=name,
+                    department=department,
+                    building=building,
+                    room=room,
+                    school="UCCS"
+                ))
+                
+                return str(result)
+                
     except Exception as e:
         logger.error("Search failed: %s", type(e).__name__, exc_info=True)
         return f"Error: {str(e)}"
