@@ -13,29 +13,29 @@ async def main():
     from dotenv import load_dotenv
     import os
 
-    load_dotenv()
+    # load_dotenv()
 
-    DB_USER = os.getenv("DB_USER")
-    DB_PASSWORD = os.getenv("DB_PASSWORD")
-    DB_HOST = os.getenv("DB_HOST")
-    DB_NAME = os.getenv("DB_NAME")
+    # DB_USER = os.getenv("DB_USER")
+    # DB_PASSWORD = os.getenv("DB_PASSWORD")
+    # DB_HOST = os.getenv("DB_HOST")
+    # DB_NAME = os.getenv("DB_NAME")
 
-    try:
-        pool = await asyncpg.create_pool(
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_NAME,
-            host=DB_HOST,
-            port=6543,
-            statement_cache_size=0
-        )          
-        logger.info("Connected to database — host=%s | db=%s", DB_HOST, DB_NAME)
-    except Exception as e:
-        logger.exception("Database connection pool failed — host=%s | db=%s | error: %s", DB_HOST, DB_NAME, e)
-        raise
+    # try:
+    #     pool = await asyncpg.create_pool(
+    #         user=DB_USER,
+    #         password=DB_PASSWORD,
+    #         database=DB_NAME,
+    #         host=DB_HOST,
+    #         port=6543,
+    #         statement_cache_size=0
+    #     )          
+    #     logger.info("Connected to database — host=%s | db=%s", DB_HOST, DB_NAME)
+    # except Exception as e:
+    #     logger.exception("Database connection pool failed — host=%s | db=%s | error: %s", DB_HOST, DB_NAME, e)
+    #     raise
 
     # Fetch the webpage
-    urls = [[]]
+    urls = [['https://phonedir.uccs.edu/employees?search=Polly%20Knuston', '', 'get-info']]
     '''
     urls = [["https://phonedir.uccs.edu/department/125953", "GOCA", "phone"],
            ["https://phonedir.uccs.edu/department/125955", "Graduate Studies", "phone"],
@@ -90,8 +90,10 @@ async def main():
             await card_directory_scrape(pool, url, dept)
         elif scrape_type == "phone":
             await phone_directory_scrape(pool, url, dept)
+        elif scrape_type == "get-info":
+            await get_directory_info(url)
 
-    await pool.close()
+    # await pool.close()
 
 
 async def card_directory_scrape(pool, url, dept):
@@ -110,9 +112,39 @@ async def card_directory_scrape(pool, url, dept):
         if not await check_person_exists(pool, name):        
             await insert_person(pool, name.text.strip().upper(), dept)
 
+
+async def get_directory_info(url):
+    from playwright.async_api import async_playwright
+    async with async_playwright() as p:
+        print(f"Scraping URL: {url} for directory info")
+        browser = await p.chromium.launch(headless=True)
+
+        page = await browser.new_page()
+
+        await page.goto(url)
+
+        await page.wait_for_timeout(5000)
+
+        html = await page.content()
+
+        soup = BeautifulSoup(html, "html.parser")
+        print(soup)
+        span = soup.select(
+            "a.data-v-316b5e68"
+        )
+        print(span)
+        for text in span:
+            split_text = text.text.strip().split(',')
+            name = split_text[1].strip() + " " + split_text[0].strip()  # Reorder to "First Last"
+            
+            print(name)
+
+        await browser.close()
+
 async def phone_directory_scrape(pool, url, dept):
     from playwright.async_api import async_playwright
     async with async_playwright() as p:
+        print(f"Scraping URL: {url} for department: {dept}")
         browser = await p.chromium.launch(headless=True)
 
         page = await browser.new_page()
