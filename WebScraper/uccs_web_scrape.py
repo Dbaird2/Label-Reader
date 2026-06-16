@@ -3,6 +3,7 @@ from asyncio.log import logger
 import requests
 from bs4 import BeautifulSoup
 import re
+import json
 
 async def main():
     import asyncpg
@@ -128,16 +129,18 @@ async def get_directory_info(url):
         html = await page.content()
 
         soup = BeautifulSoup(html, "html.parser")
-        print(soup)
-        span = soup.select(
-            "a.data-v-316b5e68"
-        )
-        print(span)
-        for text in span:
-            split_text = text.text.strip().split(',')
-            name = split_text[1].strip() + " " + split_text[0].strip()  # Reorder to "First Last"
-            
-            print(name)
+        app = soup.find("div", id="app")
+
+        data = json.loads(app["data-page"])
+
+        employee = data["props"]["employees"]["data"][0]
+        print(employee)
+
+        name = employee["name"]
+        name = name.split(",")[1].strip() + " " + name.split(",")[0].strip()  # Reorder to "First Last"
+        department = employee["department"]["dept_name"]
+
+        print(name, department)
 
         await browser.close()
 
