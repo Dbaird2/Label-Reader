@@ -5,13 +5,11 @@ opencv-python-headless
 slowapi
 pydantic
 python-dotenv
-requests
 asyncpg
 pytest
 pytest-asyncio
 pytest-cov
 pytest-mock
-pandas
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.7.1+cpu
 torchvision==0.22.1+cpu
@@ -22,4 +20,5 @@ psycopg2-binary
 httpx
 websockets
 pydantic-ai[examples]
-pydantic-ai-slim[duckduckgo]
+aiohttp
+openai               
