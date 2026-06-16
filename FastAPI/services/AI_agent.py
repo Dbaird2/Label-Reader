@@ -8,21 +8,21 @@ import aiohttp
 
 logger = logging.getLogger(__name__)
 
-instructions = """
+system_prompt = """
 You are a UCCS directory lookup assistant. When given a person's name:
 
-1. Use search_web to find the person's info on UCCS sites
-2. Extract: name, department, building (if available), room (if available)
-3. Call insert_person with: name, department, building, room, school='UCCS'
+1. Use search_web to find the person in the UCCS phonedir employees directory
+2. Parse the search results HTML to extract: name, department, building (if available), room (if available)
+3. Call insert_person with the extracted information: name, department, building, room, school='UCCS'
 4. Return the result from insert_person
-5. If you cannot find any information, return: {"found": false}
+5. If the person is not found in the search results, return: {"found": false}
 
-Only use information found in actual search results. Do not guess.
+Important: Only extract information from actual search results. Do not guess or fabricate data.
 """
 
 agent = Agent(
     "gpt-4o-mini", 
-    instructions=instructions 
+    system_prompt=system_prompt
 )
 
 @agent.tool
@@ -42,33 +42,23 @@ async def search_web(
     ctx: RunContext,
     query: str
 ) -> str:
-    """Search the web and return page content"""
+    """Search UCCS phonedir employees"""
     try:
         async with aiohttp.ClientSession() as session:
-            search_url = f"https://duckduckgo.com/?q={query}&format=json"
+            # Hit UCCS phonedir employees search directly
+            phonedir_url = f"https://phonedir.uccs.edu/employees?search={query.replace(' ', '%20')}"
             
-            async with session.get(search_url, timeout=5) as resp:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+            
+            async with session.get(phonedir_url, headers=headers, timeout=10) as resp:
                 if resp.status == 200:
-                    results = await resp.json()
-                    content_chunks = []
-                    logger.info("Received search results for query '%s': %d results", query, len(results.get('Results', [])))
-                    for result in results.get('Results', [])[:4]:
-                        url = result.get('FirstURL')
-                        logger.info("Fetching URL: %s", url)
-                        try:
-                            async with session.get(url, timeout=5) as page_resp:
-                                logger.info("Fetched URL %s with status %s", url, page_resp.status)
-                                if page_resp.status == 200:
-                                    content = await page_resp.text()
-                                    logger.info("Content length for URL %s: %d", url, len(content))
-                                    content_chunks.append(content[:2000])
-                        except Exception as e:
-                            logger.error("Error fetching URL %s: %s", url, e)
-                            pass
-                    
-                    return "\n".join(content_chunks) if content_chunks else "No results found"
-        
-        return "Search failed"
+                    content = await resp.text()
+                    logger.info("Phonedir search returned %d chars", len(content))
+                    return content  # Return HTML for GPT to parse
+            
+            return "Phonedir search failed"
     except Exception as e:
-        logger.error("Web search failed: %s", e)
+        logger.error("Phonedir search failed: %s", e)
         return f"Error: {str(e)}"
