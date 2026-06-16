@@ -7,7 +7,7 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install uv
-RUN uv pip install -r requirements.txt
+RUN uv pip install --system -r requirements.txt
 
 COPY . .
 
