@@ -45,37 +45,28 @@ async def search_web(
     ctx: RunContext,
     query: str
 ) -> str:
-    """Search UCCS phonedir employees"""
+    """Search Google for UCCS directory info"""
     try:
-        logger.info("Searching web with query: %s", query)  
         async with aiohttp.ClientSession() as session:
-            # Hit UCCS phonedir employees search directly
-
-            phonedir_url = f"https://phonedir.uccs.edu/employees?search={query.replace(' ', '%20')}"
-
-            logger.info("Searching web with query: %s", phonedir_url)
+            # Search Google for UCCS directory info
+            search_query = f'"{query}" UCCS site:uccs.edu'
+            google_url = f"https://www.google.com/search?q={quote(search_query)}"
             
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                "Referer": "https://phonedir.uccs.edu/",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.5",
-                "Connection": "keep-alive",
-                "Upgrade-Insecure-Requests": "1"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }
             
-            async with session.get(phonedir_url, headers=headers, timeout=10) as resp:
-                logger.info("Phonedir response status: %s", resp.status)
+            logger.info("Google search URL: %s", google_url)
+            async with session.get(google_url, headers=headers, timeout=10) as resp:
+                logger.info("Google response status: %s", resp.status)
                 if resp.status == 200:
                     content = await resp.text()
-                    logger.info("Phonedir response length: %d", len(content))
+                    logger.info("Google response length: %d", len(content))
                     return content
                 else:
-                    logger.error("Phonedir returned status %s", resp.status)
-                    return f"Phonedir search failed (status {resp.status})"
-    except asyncio.TimeoutError:
-        logger.error("Phonedir request timed out")
-        return "Phonedir search timeout"
+                    logger.error("Google returned status %s", resp.status)
+                    return f"Search failed (status {resp.status})"
+            
     except Exception as e:
-        logger.error("Phonedir search failed: %s", e)
+        logger.error("Search failed: %s", type(e).__name__, exc_info=True)
         return f"Error: {str(e)}"
