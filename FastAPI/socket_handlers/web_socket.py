@@ -1,6 +1,6 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from models.OCR_Model import AddPersonModel, EditPersonModel, OCRModel, OCRResult, SearchPersonModel
-from ocr_services.ocr_functions import get_results
+from ocr_services.ocr_functions import get_results, use_AI_agent
 from pydantic import ValidationError
 from pathlib import Path
 import logging 
@@ -151,7 +151,12 @@ async def search_person(websocket: WebSocket, data: dict):
     if result:
         await websocket.send_json(result)
     else:
-        await websocket.send_json({'status': 'Person Not Found'})
+        best_match = await use_AI_agent(search_model.search, 'UCCS')
+        if not best_match or not best_match.name:
+            logger.info("Agent did not find a valid match, returning empty result")
+            return OCRResult()
+        logger.info("Agent found a match, returning result: %s", best_match)
+        await websocket.send_json(best_match.model_dump())
 
 
 @router.get("/ocr-test")
