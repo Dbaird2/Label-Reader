@@ -1,10 +1,12 @@
+import asyncio
+
 from pydantic_ai import Agent, RunContext
 import state
 from models.OCR_Model import  AddPersonModel
 import logging
 import os
 import aiohttp
-
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +60,17 @@ async def search_web(
             }
             
             async with session.get(phonedir_url, headers=headers, timeout=10) as resp:
+                logger.info("Phonedir response status: %s", resp.status)
                 if resp.status == 200:
                     content = await resp.text()
-                    logger.info("Phonedir search returned %d chars", len(content))
-                    return content  # Return HTML for GPT to parse
-            
-            return "Phonedir search failed"
+                    logger.info("Phonedir response length: %d", len(content))
+                    return content
+                else:
+                    logger.error("Phonedir returned status %s", resp.status)
+                    return f"Phonedir search failed (status {resp.status})"
+    except asyncio.TimeoutError:
+        logger.error("Phonedir request timed out")
+        return "Phonedir search timeout"
     except Exception as e:
         logger.error("Phonedir search failed: %s", e)
         return f"Error: {str(e)}"
