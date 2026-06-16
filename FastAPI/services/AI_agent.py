@@ -13,12 +13,12 @@ logger = logging.getLogger(__name__)
 system_prompt = """
 You are a UCCS directory lookup assistant. When given a person's name:
 
-1. Use search_api to find the person in the UCCS phonedir API
+1. Use search_api to search and scrape the UCCS phonedir website
 2. The search_api tool will automatically extract their information and insert them into the database
 3. Return the result from search_api
 4. If the person is not found, search_api will return: {"found": false}
 
-Important: Do not call insert_person directly - search_api handles insertion automatically. Only use search_api.
+Important: Do not call insert_person directly - search_api handles extraction and insertion automatically. Only use search_api.
 """
 
 agent = Agent(
@@ -44,34 +44,47 @@ async def search_api(
     ctx: RunContext,
     query: str
 ) -> str:
-    """Search UCCS phone directory API for person info"""
+    """Search UCCS phone directory using Playwright"""
     try:
-        async with aiohttp.ClientSession() as session:
-            api_url = f"https://phonedir.uccs.edu/api/employees?search={quote(query)}"
+        from playwright.async_api import async_playwright
+        from bs4 import BeautifulSoup
+        import json
+        
+        async with async_playwright() as p:
+            phonedir_url = f"https://phonedir.uccs.edu/employees?search={quote(query)}"
+            logger.info("Scraping phonedir: %s", phonedir_url)
             
-            logger.info("Searching API: %s", api_url)
-            async with session.get(api_url, timeout=10) as resp:
-                if resp.status != 200:
-                    logger.error("API returned status %s", resp.status)
-                    return f"API search failed (status {resp.status})"
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            
+            try:
+                await page.goto(phonedir_url, timeout=15000)
+                await page.wait_for_timeout(3000)
                 
-                data = await resp.json()
-                people = data.get("data", [])
+                html = await page.content()
+                soup = BeautifulSoup(html, "html.parser")
+                app = soup.find("div", id="app")
                 
-                if not people:
-                    logger.info("No results found for: %s", query)
+                if not app:
+                    return '{"found": false}'
+                
+                data = json.loads(app["data-page"])
+                employees = data.get("props", {}).get("employees", {}).get("data", [])
+                
+                if not employees:
+                    logger.info("No employees found for: %s", query)
                     return '{"found": false}'
                 
                 # Process first result
-                person = people[0]
-                name_parts = person["name"].split(",")
+                employee = employees[0]
+                name_parts = employee["name"].split(",")
                 first_name = name_parts[1].strip()
                 last_name = name_parts[0].strip()
                 name = f"{first_name} {last_name}"
                 
-                department = person.get("department", {}).get("dept_name", "")
-                building = person.get("building", "")
-                room = person.get("room", "")
+                department = employee.get("department", {}).get("dept_name", "")
+                building = employee.get("building", "")
+                room = employee.get("room", "")
                 
                 logger.info("Found: %s, Dept: %s, Building: %s, Room: %s", name, department, building, room)
                 
@@ -86,6 +99,9 @@ async def search_api(
                 
                 return str(result)
                 
+            finally:
+                await browser.close()
+    
     except Exception as e:
         logger.error("Search failed: %s", type(e).__name__, exc_info=True)
         return f"Error: {str(e)}"
