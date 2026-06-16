@@ -1,5 +1,6 @@
 from asyncio.log import logger
 
+import httpx
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -115,35 +116,38 @@ async def card_directory_scrape(pool, url, dept):
 
 
 async def get_directory_info(url):
-    from playwright.async_api import async_playwright
-    async with async_playwright() as p:
-        print(f"Scraping URL: {url} for directory info")
-        browser = await p.chromium.launch(headless=True)
-
-        page = await browser.new_page()
-
-        await page.goto(url)
-
-        await page.wait_for_timeout(5000)
-
-        html = await page.content()
-
-        soup = BeautifulSoup(html, "html.parser")
-        app = soup.find("div", id="app")
-
-        data = json.loads(app["data-page"])
-
-        employee = data["props"]["employees"]["data"][0]
-        print(employee)
-
-        name = employee["name"]
-        name = name.split(",")[1].strip() + " " + name.split(",")[0].strip()  # Reorder to "First Last"
-        department = employee["department"]["dept_name"]
-
-        print(name, department)
-
-        await browser.close()
-
+    """Search UCCS directory without browser automation."""
+    query = "Polly Knuston"
+    # url = f"https://phonedir.uccs.edu/employees?search={query}"
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        # Parse the HTML to find the result
+        # (You'll need to inspect the actual HTML structure)
+        # Example: look for a <div> or <table> with employee info
+        result_div = soup.find("div", class_="employee-result")
+        print(soup.prettify())
+        if not result_div:
+            return {"found": False, "error": "Not found in directory"}
+        
+        # Extract building, room, department from HTML
+        building = result_div.find("span", class_="building").text.strip()
+        room = result_div.find("span", class_="room").text.strip()
+        department = result_div.find("span", class_="department").text.strip()
+        
+        # Insert into database
+        await insert_person(name=query, building=building, room=room, department=department, university="UCCS")
+        
+        return {"found": True, "building": building, "room": room, "department": department}
+    
+    except Exception as e:
+        logger.error(f"Search failed: {e}")
+        return {"found": False, "error": str(e)}
 async def phone_directory_scrape(pool, url, dept):
     from playwright.async_api import async_playwright
     async with async_playwright() as p:
