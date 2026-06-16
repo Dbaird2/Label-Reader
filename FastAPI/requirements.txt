@@ -27,3 +27,4 @@ openai==1.99.9
 pydantic-ai==0.0.24
 playwright==1.35.0
 beautifulsoup4==4.13.4
+greenlet
