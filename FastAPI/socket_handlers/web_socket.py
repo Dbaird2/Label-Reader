@@ -148,6 +148,7 @@ async def search_person(websocket: WebSocket, data: dict):
         return
 
     result = await state.db.lookupName(search_model.search)
+    logger.info("Database search result: %s", result)
     if result and result.confidence > 0.35:
         await websocket.send_json(result)
     else:
