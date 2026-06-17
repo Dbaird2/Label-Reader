@@ -166,7 +166,13 @@ async def get_results(img_bytes: bytes) -> OCRResult:
     
     
 async def use_AI_agent(candidates, university):
-    ocr_prompt = f"Find the following people at {university} and extract their department, building, and room: {', '.join(candidates)}"
+    # If candidates is already a string, use it directly
+    if isinstance(candidates, str):
+        query = candidates
+    else:
+        query = ', '.join(candidates)  
+    
+    ocr_prompt = f"Find the following people at {university} and extract their department, building, and room: {query}"
     try:
         result = await agent.run(ocr_prompt)
         logger.info("Agent raw result: %s", result)
