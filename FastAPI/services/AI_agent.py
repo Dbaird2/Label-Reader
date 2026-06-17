@@ -46,7 +46,8 @@ async def search_api(
 ) -> str:
     """Search UCCS phone directory using Playwright"""
     try:
-        from undetected_playwright.async_api import async_playwright
+        from playwright.async_api import async_playwright
+        from undetected_playwright import Malenia
         from bs4 import BeautifulSoup
         import json
         
@@ -55,9 +56,13 @@ async def search_api(
             logger.info("Scraping phonedir: %s", phonedir_url)
             
             browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
+            context = await browser.new_context(
+                locale="en-US"
+            )
+            await Malenia.apply_stealth(context)
+            page = await context.new_page()
             await page.goto(phonedir_url, timeout=15000)
-            
+
             try:
                 await page.goto(phonedir_url, timeout=15000)
                 await page.wait_for_timeout(6000)    
