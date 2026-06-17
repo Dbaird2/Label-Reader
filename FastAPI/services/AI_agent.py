@@ -65,6 +65,7 @@ async def search_api(
                 logger.info("Page HTML (first 1000 chars): %s", html[:1000])
                 soup = BeautifulSoup(html, "html.parser")
                 app = soup.find("div", id="app")
+                logger.info("Found app div: %s", app is not None)
                 
                 if not app:
                     return '{"found": false}'
