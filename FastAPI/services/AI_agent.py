@@ -59,11 +59,13 @@ async def search_api(
             
             try:
                 await page.goto(phonedir_url, timeout=15000)
-                await page.wait_for_timeout(3000)
+                await page.wait_for_load_state('networkidle')
                 
                 html = await page.content()
+                logger.info("Page HTML (first 1000 chars): %s", html[:1000])
                 soup = BeautifulSoup(html, "html.parser")
                 app = soup.find("div", id="app")
+                logger.info("Found app div: %s", app is not None)
                 
                 if not app:
                     return '{"found": false}'
