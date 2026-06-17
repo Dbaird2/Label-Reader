@@ -15,87 +15,87 @@ async def main():
     from dotenv import load_dotenv
     import os
 
-    # load_dotenv()
+    load_dotenv()
 
-    # DB_USER = os.getenv("DB_USER")
-    # DB_PASSWORD = os.getenv("DB_PASSWORD")
-    # DB_HOST = os.getenv("DB_HOST")
-    # DB_NAME = os.getenv("DB_NAME")
+    DB_USER = os.getenv("DB_USER")
+    DB_PASSWORD = os.getenv("DB_PASSWORD")
+    DB_HOST = os.getenv("DB_HOST")
+    DB_NAME = os.getenv("DB_NAME")
 
-    # try:
-    #     pool = await asyncpg.create_pool(
-    #         user=DB_USER,
-    #         password=DB_PASSWORD,
-    #         database=DB_NAME,
-    #         host=DB_HOST,
-    #         port=6543,
-    #         statement_cache_size=0
-    #     )          
-    #     logger.info("Connected to database — host=%s | db=%s", DB_HOST, DB_NAME)
-    # except Exception as e:
-    #     logger.exception("Database connection pool failed — host=%s | db=%s | error: %s", DB_HOST, DB_NAME, e)
-    #     raise
+    try:
+        pool = await asyncpg.create_pool(
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            host=DB_HOST,
+            port=6543,
+            statement_cache_size=0
+        )          
+        logger.info("Connected to database — host=%s | db=%s", DB_HOST, DB_NAME)
+    except Exception as e:
+        logger.exception("Database connection pool failed — host=%s | db=%s | error: %s", DB_HOST, DB_NAME, e)
+        raise
 
-    # Fetch the webpage
-    urls = [['https://phonedir.uccs.edu/employees?search=Polly%20Knuston', '', 'get-info']]
-    '''
-    urls = [["https://phonedir.uccs.edu/department/125953", "GOCA", "phone"],
-           ["https://phonedir.uccs.edu/department/125955", "Graduate Studies", "phone"],
-           ["https://phonedir.uccs.edu/department/126051", "Human Resources", "phone"],
-           ["https://phonedir.uccs.edu/department/125958", "IT", "phone"],
-           ["https://phonedir.uccs.edu/department/126026", "WEST", "phone"],
-           ["https://phonedir.uccs.edu/department/126147", "Wellness Center", "phone"],
-           ["https://phonedir.uccs.edu/department/126020", "VAPA", "phone"],
-           ["https://phonedir.uccs.edu/department/126079", "Alumni Relations", "phone"],
-           ["https://phonedir.uccs.edu/department/126135", "Development", "phone"],
-           ["https://phonedir.uccs.edu/department/126043", "Lane Center 3rd Floor", "phone"],
-           ["https://phonedir.uccs.edu/department/126014", "Theatreworks", "phone"],
-           ["https://phonedir.uccs.edu/department/126003", "Sociology", "phone"],
-           ["https://phonedir.uccs.edu/department/126000", "Science Center", "phone"],
-           ["https://phonedir.uccs.edu/department/126068", "Registrar's Office", "phone"],
-           ["https://phonedir.uccs.edu/department/125996", "Recreation Center", "phone"],
-           ["https://phonedir.uccs.edu/department/126002", "Public Safety", "phone"],
-           ["https://phonedir.uccs.edu/department/125988", "Psychology", "phone"],
-           ["https://phonedir.uccs.edu/department/126106", "Provost's Office", "phone"],
-           ["https://phonedir.uccs.edu/department/125985", "Political Science", "phone"],
-           ["https://phonedir.uccs.edu/department/125984", "Physics", "phone"],
-           ["https://phonedir.uccs.edu/department/125980", "Philosophy", "phone"],
-           ["https://phonedir.uccs.edu/department/125979", "DPS", "phone"],
-           ["https://phonedir.uccs.edu/department/125974", "MAE", "phone"],
-           ["https://phonedir.uccs.edu/department/125973", "Mathematics", "phone"],
-           ["https://phonedir.uccs.edu/department/125970", "Library", "phone"],
-           ["https://phonedir.uccs.edu/department/125968", "LAS", "phone"]]
-    urls = [["https://phonedir.uccs.edu/department/125902", "Anthropology", "phone"],
-           ["https://phonedir.uccs.edu/department/126174", "Bachelor of Innovation", "phone"],
-           ["https://phonedir.uccs.edu/department/126055", "Biofrontiers", "phone"],
-           ["https://phonedir.uccs.edu/department/125907", "Biology", "phone"],
-           ["https://phonedir.uccs.edu/department/125909", "Bookstore", "phone"],
-           ["https://phonedir.uccs.edu/department/126091", "CLC", "phone"],
-           ["https://phonedir.uccs.edu/department/125918", "Chancellor's Office", "phone"],
-           ["https://phonedir.uccs.edu/department/125919", "Chemistry", "phone"],
-           ["https://phonedir.uccs.edu/department/125894", "Controller's Office", "phone"],
-           ["https://phonedir.uccs.edu/department/126066", "EPIIC", "phone"],
-           ["https://phonedir.uccs.edu/department/125927", "Economics", "phone"],
-           ["https://phonedir.uccs.edu/department/125932", "ECE", "phone"],
-           ["https://phonedir.uccs.edu/department/125935", "English", "phone"],
-           ["https://phonedir.uccs.edu/department/126201", "Ent Center", "phone"],
-           ["https://phonedir.uccs.edu/department/125966", "Languages and Cultures", "phone"]
-           ]
-        ["https://comm.uccs.edu/directory", "Communications", "card"], 
-        ["https://eas.uccs.edu/cs/directory", "Computer Science", "card"],
-        ["https://eas.uccs.edu/ece/directory", "ECE", "card"], 
-        ["https://eas.uccs.edu/departments/mechanical-and-aerospace-engineering/directory", "MAE", "card"],
-        ["https://eas.uccs.edu/departments/deans-office-directory", "Dean of Engineering", "card"]
-           '''
-    for url, dept, scrape_type in urls:
-        if scrape_type == "card":
-            await card_directory_scrape(pool, url, dept)
-        elif scrape_type == "phone":
-            await phone_directory_scrape(pool, url, dept)
-        elif scrape_type == "get-info":
-            await get_directory_info(url)
-
-    # await pool.close()
+    # # Fetch the webpage
+    # urls = [['https://phonedir.uccs.edu/employees?search=Polly%20Knuston', '', 'get-info']]
+    # '''
+    # urls = [["https://phonedir.uccs.edu/department/125953", "GOCA", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125955", "Graduate Studies", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126051", "Human Resources", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125958", "IT", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126026", "WEST", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126147", "Wellness Center", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126020", "VAPA", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126079", "Alumni Relations", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126135", "Development", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126043", "Lane Center 3rd Floor", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126014", "Theatreworks", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126003", "Sociology", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126000", "Science Center", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126068", "Registrar's Office", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125996", "Recreation Center", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126002", "Public Safety", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125988", "Psychology", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126106", "Provost's Office", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125985", "Political Science", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125984", "Physics", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125980", "Philosophy", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125979", "DPS", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125974", "MAE", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125973", "Mathematics", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125970", "Library", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125968", "LAS", "phone"]]
+    # urls = [["https://phonedir.uccs.edu/department/125902", "Anthropology", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126174", "Bachelor of Innovation", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126055", "Biofrontiers", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125907", "Biology", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125909", "Bookstore", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126091", "CLC", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125918", "Chancellor's Office", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125919", "Chemistry", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125894", "Controller's Office", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126066", "EPIIC", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125927", "Economics", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125932", "ECE", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125935", "English", "phone"],
+    #        ["https://phonedir.uccs.edu/department/126201", "Ent Center", "phone"],
+    #        ["https://phonedir.uccs.edu/department/125966", "Languages and Cultures", "phone"]
+    #        ]
+    #     ["https://comm.uccs.edu/directory", "Communications", "card"], 
+    #     ["https://eas.uccs.edu/cs/directory", "Computer Science", "card"],
+    #     ["https://eas.uccs.edu/ece/directory", "ECE", "card"], 
+    #     ["https://eas.uccs.edu/departments/mechanical-and-aerospace-engineering/directory", "MAE", "card"],
+    #     ["https://eas.uccs.edu/departments/deans-office-directory", "Dean of Engineering", "card"]
+    #        '''
+    # for url, dept, scrape_type in urls:
+    #     if scrape_type == "card":
+    #         await card_directory_scrape(pool, url, dept)
+    #     elif scrape_type == "phone":
+    #         await phone_directory_scrape(pool, url, dept)
+    #     elif scrape_type == "get-info":
+    #         await get_directory_info(url)
+    await api_directory_scrape(pool)
+    await pool.close()
 
 
 async def card_directory_scrape(pool, url, dept):
@@ -115,6 +115,25 @@ async def card_directory_scrape(pool, url, dept):
             await insert_person(pool, name.text.strip().upper(), dept)
 
 
+async def api_directory_scrape(pool):
+    for page in range(29, 429):
+        r = requests.get("https://phonedir.uccs.edu/api/employees", params={"page": page})
+        print(f"Page {page} status: {r.status_code}")
+        if r.status_code != 200:
+            print(f"Failed to fetch page {page}")
+            continue
+        data = r.json()
+        data = data.get("data", [])
+        for person in data:
+            name = person["name"]
+            print(name)
+            if name.count(",") != 1 or not person.get("department") or not person["department"].get("dept_name"):
+                continue
+            name = name.split(",")[1].strip() + " " + name.split(",")[0].strip()  
+            print(name, ',', person["department"]["dept_name"])
+            if not await check_person_exists(pool, name):
+                await insert_person(pool, name.upper(), person["department"]["dept_name"])
+   
 async def get_directory_info(url):
     """Search UCCS directory without browser automation."""
     query = "Polly Knuston"
@@ -136,14 +155,12 @@ async def get_directory_info(url):
             return {"found": False, "error": "Not found in directory"}
         
         # Extract building, room, department from HTML
-        building = result_div.find("span", class_="building").text.strip()
-        room = result_div.find("span", class_="room").text.strip()
         department = result_div.find("span", class_="department").text.strip()
         
         # Insert into database
-        await insert_person(name=query, building=building, room=room, department=department, university="UCCS")
+        await insert_person(name=query, department=department, university="UCCS")
         
-        return {"found": True, "building": building, "room": room, "department": department}
+        return {"found": True, "department": department}
     
     except Exception as e:
         logger.error(f"Search failed: {e}")
