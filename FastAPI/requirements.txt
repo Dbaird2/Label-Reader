@@ -24,7 +24,7 @@ websockets==15.0.1
 aiohttp==3.12.15
 openai==1.99.9
 
+playwright
 pydantic-ai==0.0.24
 beautifulsoup4==4.13.4
 greenlet==3.1.1
-
