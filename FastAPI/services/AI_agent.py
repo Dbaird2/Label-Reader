@@ -59,8 +59,8 @@ async def search_api(
             
             try:
                 await page.goto(phonedir_url, timeout=15000)
-                await page.wait_for_selector('[data-page]', timeout=10000)
-                
+                await page.wait_for_timeout(6000)    
+
                 html = await page.content()
                 logger.info("Page HTML (first 1000 chars): %s", html[:1000])
                 soup = BeautifulSoup(html, "html.parser")
