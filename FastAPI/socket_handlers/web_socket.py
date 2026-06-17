@@ -1,6 +1,6 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from models.OCR_Model import AddPersonModel, EditPersonModel, OCRModel, OCRResult, SearchPersonModel
-from ocr_services.ocr_functions import get_results, use_AI_agent
+from ocr_services.ocr_functions import get_results
 from pydantic import ValidationError
 from pathlib import Path
 import logging 
