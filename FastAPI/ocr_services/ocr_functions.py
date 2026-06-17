@@ -1,6 +1,5 @@
 
 import os
-
 from models.OCR_Model import OCRResult
 import logging
 import base64
@@ -10,7 +9,6 @@ import re
 import state
 import asyncio
 import easyocr
-from services.AI_agent import agent
 
 reader = easyocr.Reader(['en'], gpu=False)
 
@@ -127,7 +125,6 @@ async def find_best_match(candidates: list) -> dict | None:
 
 
 async def get_results(img_bytes: bytes) -> OCRResult:
-    university = "UCCS"
     img_bytes = preprocess_label(img_bytes) 
     raw = await run_easy_ocr(img_bytes)
 
@@ -148,50 +145,5 @@ async def get_results(img_bytes: bytes) -> OCRResult:
     if best_match and best_match["confidence"] >= 0.4:
         logger.info("DB match above confidence threshold, returning result")
         return OCRResult(**best_match)
-
-    # In tests, don't call the agent
-    if os.getenv("PYTEST_CURRENT_TEST"):
-        logger.info("Skipping agent in test, returning low-confidence DB match or empty")
-        if best_match:
-            return OCRResult(**best_match)
-        return OCRResult()
+    return OCRResult()  
     
-    best_match = await use_AI_agent(candidates, university)
-    if not best_match or not best_match.name:
-        logger.info("Agent did not find a valid match, returning empty result")
-        return OCRResult()
-    logger.info("Agent found a match, returning result: %s", best_match)
-    return best_match
-    
-    
-    
-async def use_AI_agent(candidates, university):
-    # If candidates is already a string, use it directly
-    if isinstance(candidates, str):
-        query = candidates
-    else:
-        query = ', '.join(candidates)  
-    
-    ocr_prompt = f"Find the following people at {university} and extract their department, building, and room: {query}"
-    try:
-        result = await agent.run(ocr_prompt)
-        logger.info("Agent raw result: %s", result)
-        best_match = extract_inserted_person(result)
-        logger.info("Extracted person from agent result: %s", best_match)
-        if best_match:
-            return OCRResult(**best_match)
-        else:
-            logger.info("Agent did not find a match")
-            return OCRResult()
-    except Exception as e:
-        logger.error("Agent call failed: %s", e)
-        return OCRResult()
-
-def extract_inserted_person(result) -> dict | None:
-    """Extract the person dict returned from insert_person tool"""
-    for message in result.all_messages():
-        if hasattr(message, 'tool_name') and message.tool_name == 'insert_person':
-            # Now tool_return IS the person dict directly
-            if isinstance(message.tool_return, dict) and "name" in message.tool_return:
-                return message.tool_return
-    return None
