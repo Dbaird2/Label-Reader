@@ -46,6 +46,7 @@ async def search_api(
 ) -> str:
     """Search UCCS phone directory using Playwright"""
     try:
+        from playwright_stealth import stealth_async
         from playwright.async_api import async_playwright
         from bs4 import BeautifulSoup
         import json
@@ -56,7 +57,7 @@ async def search_api(
             
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
-            
+            await stealth_async(page)
             try:
                 await page.goto(phonedir_url, timeout=15000)
                 await page.wait_for_timeout(6000)    
