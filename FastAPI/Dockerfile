@@ -14,7 +14,7 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
-RUN playwright install
+RUN undetected-playwright install
 
 COPY . .
 
