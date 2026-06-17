@@ -46,7 +46,7 @@ async def search_api(
 ) -> str:
     """Search UCCS phone directory using Playwright"""
     try:
-        from playwright.async_api import async_playwright
+        from undetected_playwright.async_api import async_playwright
         from bs4 import BeautifulSoup
         import json
         
