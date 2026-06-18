@@ -12,8 +12,9 @@ async def test_find_best_match():
     fake_db_response = ({'name': 'Seth Alison', 'department': 'Theatreworks', 'building': 'Arts Center', 'confidence': 1.0}, 'Seth Alison')
 
     with patch.object(state.db, "lookupName", new=AsyncMock(return_value=fake_db_response)):
-        best_match = await find_best_match(candidates)
+        best_match, best_candidate = await find_best_match(candidates)
         assert best_match['department'] == 'Theatreworks'
+        assert best_candidate == 'Seth Alison'
 
 @pytest.mark.asyncio
 async def test_find_best_match_no_confidence():
