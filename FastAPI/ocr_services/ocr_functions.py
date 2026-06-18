@@ -114,11 +114,11 @@ def filter_ocr_results(results: list) -> list:
 
 async def find_best_match(candidates: list) -> dict | None:
     if not candidates:
-        return None
+        return None, None
     best_match = None
     best_candidate = None
     for candidate in candidates:
-        match = await state.db.lookupName(candidate)
+        match, candidate = await state.db.lookupName(candidate)
         if match and (not best_match or match["confidence"] > best_match["confidence"]):
             best_match = match
             best_candidate = candidate
