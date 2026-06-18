@@ -17,6 +17,8 @@ torch==2.7.1+cpu
 torchvision==0.22.1+cpu
 
 easyocr==1.7.2
+pydantic-ai==0.0.24
+openai==1.99.9
 
 psycopg2-binary==2.9.10
 httpx==0.28.1

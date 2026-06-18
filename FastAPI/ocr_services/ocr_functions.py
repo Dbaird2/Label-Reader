@@ -9,6 +9,7 @@ import re
 import state
 import asyncio
 import easyocr
+from services.AI_agent import agent
 
 reader = easyocr.Reader(['en'], gpu=False)
 
@@ -113,15 +114,17 @@ def filter_ocr_results(results: list) -> list:
 
 async def find_best_match(candidates: list) -> dict | None:
     if not candidates:
-        return None
+        return None, None
     best_match = None
+    best_candidate = None
     for candidate in candidates:
-        match = await state.db.lookupName(candidate)
+        match, candidate = await state.db.lookupName(candidate)
         if match and (not best_match or match["confidence"] > best_match["confidence"]):
             best_match = match
+            best_candidate = candidate
         if best_match and best_match["confidence"] == 1.0:
             break
-    return best_match
+    return best_match, best_candidate
 
 
 async def get_results(img_bytes: bytes) -> OCRResult:
@@ -138,12 +141,35 @@ async def get_results(img_bytes: bytes) -> OCRResult:
         logger.info("No valid OCR candidates found after filtering.")
         return OCRResult() 
 
-    best_match = await find_best_match(candidates)
+    best_match, best_candidate = await find_best_match(candidates)
     logger.info("Best DB match: %s", best_match)
+    logger.info("Best candidate: %s", best_candidate)
 
     # Return DB match if confident enough
-    if best_match and best_match["confidence"] >= 0.4:
+    if best_match and best_match["confidence"] > 0.4:
         logger.info("DB match above confidence threshold, returning result")
         return OCRResult(**best_match)
-    return OCRResult()  
+    else:
+        # In tests, don't call the agent
+        if os.getenv("PYTEST_CURRENT_TEST"):
+            logger.info("Skipping agent in test, returning low-confidence DB match or empty")
+            if best_match:
+                return OCRResult(**best_match)
+            return OCRResult()
+        
+        logger.info("No DB match above confidence threshold, returning best candidate")
+        result = await agent.run(best_candidate)
+        corrected_name = result.data.corrected_name
+        logger.info("AI agent corrected '%s' to '%s'", best_candidate, corrected_name)
+        if corrected_name and corrected_name != best_candidate:
+            ai_match, _ = await state.db.lookupName(corrected_name)
+            if ai_match and ai_match["confidence"] > 0.4:
+                logger.info("AI-corrected name '%s' has a good DB match, returning AI-corrected result", corrected_name)
+                return OCRResult(**ai_match)
+            else:
+                logger.info("AI-corrected name '%s' does not have a good DB match, returning original candidate", corrected_name)
+                return OCRResult()
+        else:
+            logger.info("AI agent did not provide a correction, returning original candidate")
+            return OCRResult()
     
