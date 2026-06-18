@@ -145,7 +145,7 @@ async def search_person(websocket: WebSocket, data: dict):
         search_model = SearchPersonModel(**data)
         logger.info("Searching for: %s", search_model.search)
     except ValidationError as e:
-        await websocket.send_json({"error": f"Invalid search data: {str(e)}"})
+        await websocket.send_json({"error": f"Invalid search"})
         return
 
     result = await state.db.lookupName(search_model.search)
@@ -155,7 +155,8 @@ async def search_person(websocket: WebSocket, data: dict):
     else:
         logger.info("No DB match above confidence threshold, returning best candidate")
         result = await agent.run(search_model.search)
-        corrected_name = result.data.corrected_name
+        logger.info("AI agent corrected '%s' to '%s'", search_model.search, result)
+        corrected_name = result.data
         logger.info("AI agent corrected '%s' to '%s'", search_model.search, corrected_name)
         if corrected_name and corrected_name != search_model.search:
             ai_match, _ = await state.db.lookupName(corrected_name)
