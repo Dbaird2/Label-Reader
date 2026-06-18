@@ -1,6 +1,7 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from models.OCR_Model import AddPersonModel, EditPersonModel, OCRModel, OCRResult, SearchPersonModel
 from ocr_services.ocr_functions import get_results
+from services.AI_agent import agent
 from pydantic import ValidationError
 from pathlib import Path
 import logging 
@@ -152,12 +153,21 @@ async def search_person(websocket: WebSocket, data: dict):
     if result and result['confidence'] > 0.35:
         await websocket.send_json(result)
     else:
-        best_match = await use_AI_agent(search_model.search, 'UCCS')
-        if not best_match or not best_match.name:
-            logger.info("Agent did not find a valid match, returning empty result")
-            return OCRResult()
-        logger.info("Agent found a match, returning result: %s", best_match)
-        await websocket.send_json(best_match.model_dump())
+        logger.info("No DB match above confidence threshold, returning best candidate")
+        result = await agent.run(search_model.search)
+        corrected_name = result.data.corrected_name
+        logger.info("AI agent corrected '%s' to '%s'", search_model.search, corrected_name)
+        if corrected_name and corrected_name != search_model.search:
+            ai_match, _ = await state.db.lookupName(corrected_name)
+            if ai_match and ai_match["confidence"] > 0.4:
+                logger.info("AI-corrected name '%s' has a good DB match, returning AI-corrected result", corrected_name)
+                await websocket.send_json(ai_match)
+            else:
+                logger.info("AI-corrected name '%s' does not have a good DB match, returning original candidate", corrected_name)
+                await websocket.send_json({"error": f"No valid match found for '{search_model.search}' after AI correction"})
+        else:
+            logger.info("AI agent did not provide a correction, returning original candidate")
+            await websocket.send_json({"error": f"No valid match found for '{search_model.search}' after AI correction"})
 
 
 @router.get("/ocr-test")
