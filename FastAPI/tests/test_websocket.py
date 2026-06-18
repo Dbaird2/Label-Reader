@@ -15,10 +15,10 @@ def get_test_image(filename):
 
 async def test_websocket_ocr():
     fake_ocr = [(None, "Seth Alison", 0.95)]
-    fake_db = {
+    fake_db = (
         {"name": "Seth Alison", "department": "Theatreworks", "building": "Arts Center", "confidence": 1.0},
         'Seth Alison'
-    }
+    )
 
     with patch("ocr_services.ocr_functions.reader.readtext", return_value=fake_ocr), \
         patch.object(state.db, "lookupName", new=AsyncMock(return_value=fake_db)):
