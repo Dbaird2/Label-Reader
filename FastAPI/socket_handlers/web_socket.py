@@ -1,7 +1,7 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from models.OCR_Model import AddPersonModel, EditPersonModel, OCRModel, OCRResult, SearchPersonModel
 from ocr_services.ocr_functions import get_results
-from services.AI_agent import agent
+from services.AI_agent import agent, run_agent_with_timeout
 from pydantic import ValidationError
 from pathlib import Path
 import logging 
@@ -149,23 +149,8 @@ async def search_person(data: dict):
     if result and result['confidence'] > 0.35:
         return result
     else:
-        logger.info("No DB match above confidence threshold, returning best candidate")
-        result = await agent.run(search_model.search)
-        logger.info("AI agent corrected '%s' to '%s'", search_model.search, result)
-        corrected_name= result.data
-        logger.info(_)
-        logger.info("AI agent corrected '%s' to '%s'", search_model.search, corrected_name)
-        if corrected_name and corrected_name != search_model.search:
-            ai_match = await state.db.lookupName(corrected_name)
-            if ai_match and ai_match["confidence"] > 0.4:
-                logger.info("AI-corrected name '%s' has a good DB match, returning AI-corrected result", corrected_name)
-                return ai_match
-            else:
-                logger.info("AI-corrected name '%s' does not have a good DB match, returning original candidate", corrected_name)
-                return {"error": f"No valid match found for '{search_model.search}' after AI correction"}
-        else:
-            logger.info("AI agent did not provide a correction, returning original candidate")
-            return {"error": f"No valid match found for '{search_model.search}' after AI correction"}
+        result = await run_agent_with_timeout(search_model)
+        return result
 
 
 @router.get("/ocr-test")

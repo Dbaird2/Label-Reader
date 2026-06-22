@@ -9,7 +9,7 @@ import re
 import state
 import asyncio
 import easyocr
-from services.AI_agent import agent
+from services.AI_agent import agent, run_agent_with_timeout
 
 reader = easyocr.Reader(['en'], gpu=False)
 
@@ -157,19 +157,6 @@ async def get_results(img_bytes: bytes) -> OCRResult:
                 return OCRResult(**best_match)
             return OCRResult()
         
-        logger.info("No DB match above confidence threshold, returning best candidate")
-        result = await agent.run(best_candidate)
-        corrected_name = result.data.corrected_name
-        logger.info("AI agent corrected '%s' to '%s'", best_candidate, corrected_name)
-        if corrected_name and corrected_name != best_candidate:
-            ai_match, _ = await state.db.lookupName(corrected_name)
-            if ai_match and ai_match["confidence"] > 0.4:
-                logger.info("AI-corrected name '%s' has a good DB match, returning AI-corrected result", corrected_name)
-                return OCRResult(**ai_match)
-            else:
-                logger.info("AI-corrected name '%s' does not have a good DB match, returning original candidate", corrected_name)
-                return OCRResult()
-        else:
-            logger.info("AI agent did not provide a correction, returning original candidate")
-            return OCRResult()
+        result = await run_agent_with_timeout(best_candidate)
+        return result
     
