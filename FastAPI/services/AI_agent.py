@@ -48,5 +48,5 @@ async def run_agent_with_timeout(search_model: SearchPersonModel | str, timeout:
             logger.info("AI agent did not provide a correction, returning original candidate")
             return {"error": f"No valid match found for '{search_model.search}' after AI correction"}
     except asyncio.TimeoutError:
-        logger.warning("AI agent timed out after %d seconds for input '%s'", timeout, name)
+        logger.warning("AI agent timed out after %d seconds for input '%s'", timeout, corrected_name)
         return {"error": f"AI agent timed out after {timeout} seconds"}
