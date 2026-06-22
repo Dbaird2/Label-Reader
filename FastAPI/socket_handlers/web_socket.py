@@ -152,15 +152,14 @@ async def search_person(data: dict):
         logger.info("No DB match above confidence threshold, returning best candidate")
         result = await agent.run(search_model.search)
         logger.info("AI agent corrected '%s' to '%s'", search_model.search, result)
-        corrected_name = result.data
-        logger.info("AI agent corrected '%s' to '%s'", search_model.search, corrected_name)
-        if corrected_name and corrected_name != search_model.search:
-            ai_match, _ = await state.db.lookupName(corrected_name)
+    
+        if result and result != search_model.search:
+            ai_match, _ = await state.db.lookupName(result)
             if ai_match and ai_match["confidence"] > 0.4:
-                logger.info("AI-corrected name '%s' has a good DB match, returning AI-corrected result", corrected_name)
+                logger.info("AI-corrected name '%s' has a good DB match, returning AI-corrected result", result)
                 return ai_match
             else:
-                logger.info("AI-corrected name '%s' does not have a good DB match, returning original candidate", corrected_name)
+                logger.info("AI-corrected name '%s' does not have a good DB match, returning original candidate", result)
                 return {"error": f"No valid match found for '{search_model.search}' after AI correction"}
         else:
             logger.info("AI agent did not provide a correction, returning original candidate")
