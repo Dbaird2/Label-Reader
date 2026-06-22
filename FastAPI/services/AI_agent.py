@@ -35,7 +35,6 @@ async def run_agent_with_timeout(search_model: SearchPersonModel | str, timeout:
         result = await agent.run(search_model.search if isinstance(search_model, SearchPersonModel) else search_model)
         logger.info("AI agent corrected '%s' to '%s'", search_model.search if isinstance(search_model, SearchPersonModel) else search_model, result)
         corrected_name= result.data
-        logger.info(_)
         logger.info("AI agent corrected '%s' to '%s'", search_model.search if isinstance(search_model, SearchPersonModel) else search_model, corrected_name)
         if corrected_name and corrected_name != search_model.search:
             ai_match = await state.db.lookupName(corrected_name)
