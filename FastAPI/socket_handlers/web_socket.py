@@ -29,19 +29,24 @@ async def ocr_ws(websocket: WebSocket):
                 data = await websocket.receive_json()
                 if data.get("addPerson"):
                     logger.info("Handling addPerson request")
-                    await handle_add_person(websocket, data)
+                    res = await handle_add_person(data)
                 elif data.get("ocr"):
                     logger.info("Handling OCR request")
-                    await handle_ocr(websocket, data)
+                    res = await handle_ocr(data)
                 elif data.get("searchPerson"):
                     logger.info("Handling searchPerson request")
-                    await search_person(websocket, data)
+                    res = await search_person(data)
                 elif data.get("editPerson"):
                     logger.info("Handling editPerson request")
-                    await handle_edit_person(websocket, data)
+                    res = await handle_edit_person(data)
                 else:
                     logger.warning("Unknown message type: %s", data)
-                    await websocket.send_json({"error": "Unknown message type"})
+                    res = {"error": "Unknown message type"}
+                if res:
+                    await websocket.send_json(res)
+                else:
+                    logger.warning("No response generated for message: %s", data)
+                    await websocket.send_json({"error": "No response generated"})
 
             except WebSocketDisconnect as e:
                 logger.warning("Client disconnected: code=%s", e.code)
@@ -84,74 +89,65 @@ async def edit_person(person: EditPersonModel) -> bool:
         return False
 
 
-async def handle_ocr(websocket: WebSocket, data: dict):
+async def handle_ocr(data: dict):
     try:
         message = OCRModel(**data)
     except ValidationError as e:
-        await websocket.send_json({"error": f"Invalid OCR data: {str(e)}"})
-        return
+        return {"error": f"Invalid OCR data: {str(e)}"}
 
     img_bytes = await decode_base64(message.image)
     if not img_bytes:
-        await websocket.send_json({"error": "Invalid base64"})
-        return
+        return {"error": "Invalid base64"}
+        
 
     result = await run_ocr(img_bytes)
     if not result:
-        await websocket.send_json({"error": "Processing failed"})
-        return
+        return {"error": "Processing failed"}
         
     if "error" in result:
-        await websocket.send_json(result)
-        return
+        return result
 
     logger.info("Results: %s", result)
     if not result.department and not result.name:
-        await websocket.send_json({"status": "No result found"})
-        return
-    await websocket.send_json(result.model_dump())
+        return {"status": "No result found"}
+    return result.model_dump()
 
 
-async def handle_add_person(websocket: WebSocket, data: dict):
+async def handle_add_person(data: dict):
     try:
         person = AddPersonModel(**data)
     except ValidationError as e:
-        await websocket.send_json({"error": f"Invalid person data: {str(e)}"})
-        return
+        return {"error": f"Invalid person data: {str(e)}"}
 
     success = await upsert_person(person)
     if not success:
-        await websocket.send_json({"error": "Failed to add person"})
-        return
+        return {"error": "Failed to add person"}
 
-    await websocket.send_json({"status": "Person added successfully"})
+    return {"status": "Person added successfully"}
 
-async def handle_edit_person(websocket: WebSocket, data: dict):
+async def handle_edit_person(data: dict):
     try:
         person = EditPersonModel(**data)
     except ValidationError as e:
-        await websocket.send_json({"error": f"Invalid person data: {str(e)}"})
-        return
+        return {"error": f"Invalid person data: {str(e)}"}
 
     success = await edit_person(person)
     if not success:
-        await websocket.send_json({"error": "Failed to edit person"})
-        return
+        return {"error": "Failed to edit person"}
 
-    await websocket.send_json({"status": "Person edited successfully"})
-    
-async def search_person(websocket: WebSocket, data: dict):
+    return {"status": "Person edited successfully"}
+
+async def search_person(data: dict):
     try:
         search_model = SearchPersonModel(**data)
         logger.info("Searching for: %s", search_model.search)
     except ValidationError as e:
-        await websocket.send_json({"error": f"Invalid search"})
-        return
+        return {"error": f"Invalid search"}
 
     result = await state.db.lookupName(search_model.search)
     logger.info("Database search result: %s", result)
     if result and result['confidence'] > 0.35:
-        await websocket.send_json(result)
+        return result
     else:
         logger.info("No DB match above confidence threshold, returning best candidate")
         result = await agent.run(search_model.search)
@@ -162,13 +158,13 @@ async def search_person(websocket: WebSocket, data: dict):
             ai_match, _ = await state.db.lookupName(corrected_name)
             if ai_match and ai_match["confidence"] > 0.4:
                 logger.info("AI-corrected name '%s' has a good DB match, returning AI-corrected result", corrected_name)
-                await websocket.send_json(ai_match)
+                return ai_match
             else:
                 logger.info("AI-corrected name '%s' does not have a good DB match, returning original candidate", corrected_name)
-                await websocket.send_json({"error": f"No valid match found for '{search_model.search}' after AI correction"})
+                return {"error": f"No valid match found for '{search_model.search}' after AI correction"}
         else:
             logger.info("AI agent did not provide a correction, returning original candidate")
-            await websocket.send_json({"error": f"No valid match found for '{search_model.search}' after AI correction"})
+            return {"error": f"No valid match found for '{search_model.search}' after AI correction"}
 
 
 @router.get("/ocr-test")
