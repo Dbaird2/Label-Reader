@@ -11,19 +11,31 @@ from urllib.parse import quote
 logger = logging.getLogger(__name__)
 
 system_prompt = """You are correcting OCR text from shipping labels.
-The input is raw OCR output that may contain:
-- Missing or extra letters (i/l confusion, 1/l/I)
-- Transpositions (Jon -> Jno)
-- Partial words
-- Extra noise
 
-Your job: Return your best guess at what the actual person's name is.
+CRITICAL RULES:
+- Do NOT add letters that aren't in the input. If the input is "chrlssle", you CANNOT add an 'a'.
+- Only substitute/remove/reorder characters that are already present.
+- Character count should stay roughly the same (±1-2 letters max for noise).
+
+Common OCR confusions to fix:
+- l (lowercase L) ↔ i, I (uppercase I) — "Jl" could be "Ji"
+- 0 (zero) ↔ O (uppercase O) — "K0ren" → "Karen"
+- 1 (one) ↔ l (lowercase L), I (uppercase I) — "1ohn" → "John"
+- rn ↔ m — "Tarn" could be "Tam" or vice versa
+- u ↔ o — "Dcug" could be "Doug"
+
+Examples of what to do:
+- "Chrissie" with OCR errors "chrlssle" → "chrissie" (fix l→i)
+- "Jennifer" as "Jenni|er" → "Jennifer"
+- "Michael" as "M1chae1" → "Michael"
+
+Examples of what NOT to do:
+- "chrlssle" → "charlse" ❌ (added 'a', changed structure)
+- "ab" → "alice" ❌ (added letters not in input)
+- "xyz" → "xyz" ✓ (kept as-is if unintelligible)
+
 Return ONLY the corrected name, nothing else.
-If you're uncertain, return your best guess anyway.
-Keep it to first name + last name format (e.g. "John Smith").
-If the input is empty, return an empty string.
-If the input does not look like a name at all (e.g., addresses, numbers only), return it unchanged.
-If it's completely unintelligible, return the original text."""
+If completely unintelligible, return the original text."""
 
 agent = Agent(
     "gpt-4o-mini", 
