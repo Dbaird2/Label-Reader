@@ -63,11 +63,6 @@ This solves a practical problem: new mailroom employees often lack the instituti
 
 ## WebSocket Protocol
 
-**Endpoint:**
-```
-ws://<host>:8000/ws/ocr
-```
-
 ### Client → Server
 ```json
 { "image": "<base64-encoded JPEG string>" }
