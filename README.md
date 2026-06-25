@@ -138,7 +138,7 @@ CREATE INDEX person_name_trgm_idx ON person USING GIN (name gin_trgm_ops);
 label-reader/
 ├── FastAPI/
 │   ├── ocr_services/          # EasyOCR + OpenCV pipeline
-│   ├── ai_agent/              # OpenAI-powered name correction
+│   ├── services/              # OpenAI-powered name correction
 │   ├── socket_handlers/       # FastAPI WebSocket handlers
 │   └── db/                    # asyncpg DB helpers & name lookup
 └── mobile/
